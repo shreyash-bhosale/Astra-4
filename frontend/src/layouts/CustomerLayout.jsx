@@ -17,6 +17,8 @@ import {
   Sparkles
 } from 'lucide-react';
 
+import { supabase } from '../services/supabase';
+
 export default function CustomerLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -26,6 +28,8 @@ export default function CustomerLayout({ children }) {
 
   useEffect(() => {
     let isMounted = true;
+    let timerId = null;
+
     const fetchNotifs = async () => {
       try {
         const data = await api.getCustomerNotifications();
@@ -33,21 +37,93 @@ export default function CustomerLayout({ children }) {
           setNotifications(data);
         }
       } catch (err) {
-        // silent
+        // Handled silently for polling
       }
     };
+
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 8000);
+
+    // Visibility-aware polling
+    const scheduleNext = () => {
+      if (timerId) clearTimeout(timerId);
+      if (document.visibilityState === 'visible') {
+        timerId = setTimeout(() => {
+          fetchNotifs().then(scheduleNext);
+        }, 5000);
+      }
+    };
+    scheduleNext();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifs();
+        scheduleNext();
+      } else if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Supabase Realtime channel subscription if client is available
+    let channel = null;
+    if (supabase && user?.id) {
+      try {
+        channel = supabase
+          .channel(`customer_notifs_${user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'email_notifications'
+            },
+            () => {
+              if (isMounted) fetchNotifs();
+            }
+          )
+          .subscribe();
+      } catch (e) {
+        // Fall back to polling
+      }
+    }
+
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (timerId) clearTimeout(timerId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
     };
-  }, []);
+  }, [user?.id]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read && !n.is_read).length;
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true, is_read: true })));
+    try {
+      await api.markAllNotificationsRead();
+    } catch (err) {
+      console.warn('Failed to mark all notifications read:', err.message);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.read && !notif.is_read) {
+      setNotifications(prev =>
+        prev.map(n => (n.id === notif.id ? { ...n, read: true, is_read: true } : n))
+      );
+      try {
+        await api.markNotificationRead(notif.id);
+      } catch (err) {
+        console.warn('Failed to mark notification read:', err.message);
+      }
+    }
+    setNotifOpen(false);
+    if (notif.ticketId || notif.ticket_id) {
+      navigate(`/customer/issues/${notif.ticketId || notif.ticket_id}`);
+    }
   };
 
   const navItems = [
@@ -279,28 +355,37 @@ export default function CustomerLayout({ children }) {
                         No notifications yet.
                       </div>
                     ) : (
-                      notifications.map(notif => (
-                        <div
-                          key={notif.id}
-                          style={{
-                            padding: '12px 16px',
-                            borderBottom: '1px solid var(--border-light)',
-                            backgroundColor: notif.read ? 'transparent' : 'var(--bg-secondary)'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
-                              {notif.subject || 'Case Update'}
+                      notifications.map(notif => {
+                        const isRead = Boolean(notif.read || notif.is_read);
+                        return (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif)}
+                            style={{
+                              padding: '12px 16px',
+                              borderBottom: '1px solid var(--border-light)',
+                              backgroundColor: isRead ? 'transparent' : 'rgba(59, 130, 246, 0.06)',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', color: isRead ? 'var(--text-primary)' : 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {!isRead && (
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-blue)', display: 'inline-block' }} />
+                                )}
+                                {notif.subject || notif.title || 'Case Update'}
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                {notif.created_at ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                              </span>
                             </div>
-                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                              {notif.created_at ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                            </span>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebKitLineClamp: 2, WebKitBoxOrient: 'vertical' }}>
+                              {notif.message || notif.body_text || notif.title}
+                            </div>
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebKitLineClamp: 2, WebKitBoxOrient: 'vertical' }}>
-                            {notif.message}
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>

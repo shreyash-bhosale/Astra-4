@@ -267,6 +267,10 @@ export class Repository {
             payload.body_html = payload.html_body;
           }
           delete payload.html_body;
+          if (payload.is_read !== undefined && payload.read === undefined) {
+            payload.read = payload.is_read;
+          }
+          delete payload.is_read;
           if (payload.ticket_id && !this.findById('tickets', payload.ticket_id)) {
             payload.ticket_id = null;
           }
@@ -281,7 +285,13 @@ export class Repository {
           if (payload.ticket_id && !this.findById('tickets', payload.ticket_id)) {
             payload.ticket_id = null;
           }
+        } else if (tableName === 'orders') {
+          delete payload.delivered_at;
+          if (payload.customer_id && !this.findById('customers', payload.customer_id)) {
+            payload.customer_id = null;
+          }
         } else if (tableName === 'tickets') {
+          delete payload.internal_notes;
           if (payload.order_id && !this.findById('orders', payload.order_id)) {
             payload.order_id = null;
           }

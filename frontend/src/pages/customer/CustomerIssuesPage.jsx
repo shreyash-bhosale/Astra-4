@@ -119,7 +119,44 @@ export default function CustomerIssuesPage() {
       {/* Issues List */}
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div className="skeleton-pulse" style={{ width: '48px', height: '48px', borderRadius: '50%', margin: '0 auto 16px', backgroundColor: 'var(--bg-tertiary)' }} />
           Loading your support tickets...
+        </div>
+      ) : error ? (
+        <div
+          style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            backgroundColor: 'var(--bg-primary)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid #fecaca'
+          }}
+        >
+          <div style={{ color: '#dc2626', fontWeight: 700, fontSize: '1.05rem', marginBottom: '8px' }}>
+            Unable to load issues
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '440px', margin: '0 auto 20px' }}>
+            {error}. Please check your connection and try again.
+          </p>
+          <button
+            onClick={() => {
+              setError('');
+              setLoading(true);
+              api.getCustomerTickets()
+                .then(data => {
+                  setTickets(Array.isArray(data) ? data : []);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  setError(err.message || 'Unable to load issues');
+                  setLoading(false);
+                });
+            }}
+            className="btn-secondary"
+            style={{ height: '38px', paddingInline: '20px', fontSize: '0.85rem', cursor: 'pointer' }}
+          >
+            Retry
+          </button>
         </div>
       ) : filteredTickets.length === 0 ? (
         <div
@@ -133,7 +170,7 @@ export default function CustomerIssuesPage() {
         >
           <LifeBuoy size={36} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-            {filter === 'ALL' ? 'No issues yet' : filter === 'ACTIVE' ? 'No active issues' : 'No resolved issues yet'}
+            {filter === 'ALL' ? 'No issues raised yet' : filter === 'ACTIVE' ? 'No active issues' : 'No resolved issues yet'}
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', maxWidth: '420px', marginInline: 'auto', marginTop: '6px', marginBottom: '20px' }}>
             If you ever experience a problem with your order, hardware, or delivery, we are ready to assist.
@@ -195,7 +232,7 @@ export default function CustomerIssuesPage() {
                   </div>
 
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
-                    {ticket.title}
+                    {ticket.title || ticket.subject || 'Support Request'}
                   </h3>
 
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '6px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -205,13 +242,13 @@ export default function CustomerIssuesPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '12px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Calendar size={13} />
-                      <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                      <span>{ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'Recent'}</span>
                     </span>
 
                     {ticket.order && (
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Package size={13} />
-                        <span>Order #{ticket.order.id} ({ticket.order.productName})</span>
+                        <span>Order #{ticket.order.id} ({ticket.order.productName || ticket.order.product_name})</span>
                       </span>
                     )}
                   </div>

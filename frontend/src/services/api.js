@@ -332,6 +332,27 @@ class ApiClient {
     return this.request('/customer/notifications');
   }
 
+  markNotificationRead(notificationId) {
+    return this.request(`/customer/notifications/${notificationId}/read`, {
+      method: 'PATCH'
+    });
+  }
+
+  markAllNotificationsRead() {
+    return this.request('/customer/notifications/mark-all-read', {
+      method: 'POST'
+    });
+  }
+
+  // Alias helpers
+  createIssue(issueData) {
+    return this.createCustomerTicket(issueData);
+  }
+
+  getCustomerIssues() {
+    return this.getCustomerTickets();
+  }
+
   sendCustomerChatMessage(message) {
     return this.request('/customer/chat', {
       method: 'POST',

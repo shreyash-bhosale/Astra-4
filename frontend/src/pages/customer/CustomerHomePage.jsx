@@ -24,23 +24,27 @@ export default function CustomerHomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const [profileRes, ticketsRes] = await Promise.all([
-          api.getCustomerProfile().catch(() => null),
-          api.getCustomerTickets().catch(() => [])
-        ]);
+  const [loadError, setLoadError] = useState('');
 
-        setProfileData(profileRes);
-        setRecentTickets(Array.isArray(ticketsRes) ? ticketsRes.slice(0, 4) : []);
-      } catch (err) {
-        setError('Unable to load customer overview');
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setLoadError('');
+      const [profileRes, ticketsRes] = await Promise.all([
+        api.getCustomerProfile(),
+        api.getCustomerTickets()
+      ]);
+
+      setProfileData(profileRes);
+      setRecentTickets(Array.isArray(ticketsRes) ? ticketsRes.slice(0, 4) : []);
+    } catch (err) {
+      setLoadError(err.message || 'Unable to load customer overview');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -291,6 +295,31 @@ export default function CustomerHomePage() {
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
             Loading your issues...
           </div>
+        ) : loadError ? (
+          <div
+            style={{
+              padding: '32px 24px',
+              textAlign: 'center',
+              backgroundColor: 'rgba(239, 68, 68, 0.05)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: 'var(--radius-md)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#dc2626', marginBottom: '8px', fontWeight: 600 }}>
+              <AlertCircle size={18} />
+              <span>Unable to load issues</span>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              {loadError}
+            </p>
+            <button
+              onClick={loadData}
+              className="btn-primary"
+              style={{ height: '36px', paddingInline: '16px', fontSize: '0.85rem' }}
+            >
+              Retry
+            </button>
+          </div>
         ) : recentTickets.length === 0 ? (
           <div
             style={{
@@ -349,7 +378,7 @@ export default function CustomerHomePage() {
 
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                        {ticket.title}
+                        {ticket.title || ticket.subject || 'Support Request'}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                         Case #{ticket.id} • {new Date(ticket.created_at).toLocaleDateString()}

@@ -98,7 +98,7 @@ export const getInitialData = () => {
   const orders = [
     {
       id: 'ORD-4821',
-      customer_id: 'cust-101',
+      customer_id: 'cust-100',
       product_name: 'Astra SoundPro Wireless ANC Headphones (Graphite Silver)',
       amount: 349.00,
       status: 'DELIVERED',

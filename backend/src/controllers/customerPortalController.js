@@ -64,24 +64,28 @@ export const getCustomerSafeStatus = (status) => {
 // Helper to resolve customer identity from auth session
 const resolveCustomerFromUser = (user) => {
   if (!user) return null;
-  // Match by customer email or ID
+  // Match by customer user_id first, then email or ID
   let customer = db.findOne('customers', c =>
+    c.user_id === user.id ||
     (c.email && c.email.toLowerCase() === user.email.toLowerCase()) ||
     c.id === user.id ||
     c.id === user.customer_id
   );
 
   if (!customer) {
-    // If not found in seeds, create on the fly so any new registrant has a working customer profile
+    // If not found, create on the fly and link directly to user.id
     customer = db.insert('customers', {
       id: `cust-${uuidv4().slice(0, 8)}`,
+      user_id: user.id,
       name: user.name || user.email.split('@')[0],
       email: user.email,
       tier: 'Standard',
       company: 'Individual Account',
-      phone: '+1 (555) 019-2834',
+      phone: user.phone || '+1 (555) 019-2834',
       created_at: new Date().toISOString()
     });
+  } else if (!customer.user_id && user.id) {
+    db.update('customers', customer.id, { user_id: user.id });
   }
 
   return customer;
@@ -110,13 +114,16 @@ export const getCustomerProfile = async (req, res, next) => {
   }
 };
 
-// 2. GET /api/customer/tickets
+// 2. GET /api/customer/tickets (or /api/customer/issues)
 export const getCustomerTickets = async (req, res, next) => {
   try {
     const customer = resolveCustomerFromUser(req.user);
-    const tickets = db.find('tickets', t => t.customer_id === customer.id) || [];
+    if (!customer) {
+      return res.status(401).json({ error: 'Unauthorized: Unable to resolve customer identity.' });
+    }
 
-    tickets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const tickets = db.find('tickets', t => t.customer_id === customer.id) || [];
+    tickets.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     const sanitizedTickets = tickets.map(ticket => {
       const order = ticket.order_id ? db.findById('orders', ticket.order_id) : null;
@@ -125,12 +132,22 @@ export const getCustomerTickets = async (req, res, next) => {
       return {
         id: ticket.id,
         title: ticket.title,
+        subject: ticket.title,
         description: ticket.description,
         category: ticket.category || 'General Issue',
-        priority: ticket.priority,
+        priority: ticket.priority || 'medium',
         status: ticket.status,
         customerSafeStatus: statusInfo,
-        order: order ? { id: order.id, productName: order.product_name, amount: order.amount } : null,
+        order: order
+          ? {
+              id: order.id,
+              productName: order.product_name,
+              amount: order.amount,
+              status: order.status
+            }
+          : null,
+        orderId: ticket.order_id || null,
+        order_id: ticket.order_id || null,
         created_at: ticket.created_at,
         customer_response: ticket.customer_response,
         resolution_summary: ticket.status === 'RESOLVED' ? ticket.resolution_summary : null
@@ -143,36 +160,58 @@ export const getCustomerTickets = async (req, res, next) => {
   }
 };
 
-// 3. POST /api/customer/tickets
+// 3. POST /api/customer/tickets (or /api/customer/issues)
 export const createCustomerTicket = async (req, res, next) => {
   try {
     const customer = resolveCustomerFromUser(req.user);
-    const { title, description, category, order_id, preferred_contact } = req.body;
+    if (!customer) {
+      return res.status(401).json({ error: 'Unauthorized: Unable to resolve customer account.' });
+    }
 
-    if (!title || title.trim().length < 3) {
+    const {
+      title,
+      subject,
+      description,
+      category = 'general',
+      priority,
+      order_id,
+      orderId,
+      preferred_contact
+    } = req.body;
+
+    const effectiveTitle = (title || subject || '').trim();
+    const effectiveOrderId = order_id || orderId || null;
+
+    if (!effectiveTitle || effectiveTitle.length < 3) {
       return res.status(400).json({ error: 'Issue subject must be at least 3 characters.' });
     }
     if (!description || description.trim().length < 5) {
       return res.status(400).json({ error: 'Please describe the issue in at least 5 characters.' });
     }
 
-    // Verify order belongs to customer if provided
+    // Verify order ownership strictly: return 403 Forbidden if order belongs to another customer
     let verifiedOrderId = null;
-    if (order_id) {
-      const order = db.findById('orders', order_id);
-      if (order && order.customer_id === customer.id) {
-        verifiedOrderId = order.id;
+    if (effectiveOrderId) {
+      const order = db.findById('orders', effectiveOrderId);
+      if (!order) {
+        return res.status(404).json({ error: `Order #${effectiveOrderId} was not found.` });
       }
+      if (order.customer_id !== customer.id) {
+        return res.status(403).json({ error: 'Forbidden: You do not have permission to attach this order.' });
+      }
+      verifiedOrderId = order.id;
     }
 
     const ticketId = `tkt-${Math.floor(100 + Math.random() * 900)}`;
+    const effectivePriority = priority || (category === 'damaged_product' || category === 'missing_item' ? 'high' : 'medium');
+
     const newTicket = db.insert('tickets', {
       id: ticketId,
-      title: title.trim(),
+      title: effectiveTitle,
       description: description.trim(),
       customer_id: customer.id,
       order_id: verifiedOrderId,
-      priority: category === 'damaged_product' || category === 'missing_item' ? 'high' : 'medium',
+      priority: effectivePriority,
       category: category || 'general',
       status: 'OPEN',
       created_at: new Date().toISOString()
@@ -185,6 +224,19 @@ export const createCustomerTicket = async (req, res, next) => {
       agent: 'CustomerPortal',
       description: `Customer ${customer.name} raised issue #${ticketId}: "${newTicket.title}"`,
       metadata: { category: newTicket.category, orderId: verifiedOrderId }
+    });
+
+    // Create an in-portal notification for the customer
+    db.insert('email_notifications', {
+      id: `notif-${uuidv4().slice(0, 8)}`,
+      ticket_id: ticketId,
+      customer_id: customer.id,
+      event_type: 'TICKET_CREATED',
+      recipient: customer.email,
+      subject: `Support Ticket #${ticketId} Received: ${effectiveTitle}`,
+      body_text: `Your support request regarding "${effectiveTitle}" has been received and queued for investigation.`,
+      status: 'SENT',
+      sent_at: new Date().toISOString()
     });
 
     // Dispatch automated confirmation email (safely non-blocking)
@@ -204,8 +256,13 @@ export const createCustomerTicket = async (req, res, next) => {
       ticket: {
         id: newTicket.id,
         title: newTicket.title,
+        subject: newTicket.title,
+        description: newTicket.description,
+        category: newTicket.category,
+        priority: newTicket.priority,
         status: newTicket.status,
         customerSafeStatus: getCustomerSafeStatus(newTicket.status),
+        orderId: verifiedOrderId,
         created_at: newTicket.created_at
       }
     });
@@ -380,24 +437,98 @@ export const getCustomerOrders = async (req, res, next) => {
   }
 };
 
-// 7. GET /api/customer/notifications
+// 7. GET /api/customer/notifications (or /api/notifications)
 export const getCustomerNotifications = async (req, res, next) => {
   try {
     const customer = resolveCustomerFromUser(req.user);
-    const emails = db.find('email_notifications', e => e.recipient === customer.email || e.customer_id === customer.id) || [];
+    if (!customer) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-    emails.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const emails = db.find('email_notifications', e =>
+      (e.recipient && e.recipient.toLowerCase() === customer.email.toLowerCase()) ||
+      e.customer_id === customer.id
+    ) || [];
+
+    emails.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     const notifications = emails.map(email => ({
       id: email.id,
       ticketId: email.ticket_id,
       title: email.subject,
+      subject: email.subject,
+      message: email.body_text || email.subject,
       eventType: email.event_type,
       status: email.status,
-      timestamp: email.sent_at || email.created_at
+      read: Boolean(email.read || email.is_read),
+      is_read: Boolean(email.read || email.is_read),
+      timestamp: email.sent_at || email.created_at,
+      created_at: email.created_at
     }));
 
     return res.json(notifications);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 7b. PATCH /api/customer/notifications/:id/read (or /api/notifications/:id/read)
+export const markNotificationRead = async (req, res, next) => {
+  try {
+    const customer = resolveCustomerFromUser(req.user);
+    const { id } = req.params;
+
+    const notif = db.findById('email_notifications', id);
+    if (!notif) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    // Verify ownership
+    if (
+      notif.customer_id &&
+      notif.customer_id !== customer.id &&
+      notif.recipient.toLowerCase() !== customer.email.toLowerCase()
+    ) {
+      return res.status(403).json({ error: 'Forbidden: Notification does not belong to your account' });
+    }
+
+    const updated = db.update('email_notifications', id, {
+      read: true,
+      is_read: true
+    });
+
+    return res.json({
+      success: true,
+      notification: {
+        id: updated.id,
+        read: true,
+        is_read: true
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 7c. POST /api/customer/notifications/mark-all-read (or /api/notifications/read-all)
+export const markAllNotificationsRead = async (req, res, next) => {
+  try {
+    const customer = resolveCustomerFromUser(req.user);
+    const notifs = db.find('email_notifications', e =>
+      (e.recipient && e.recipient.toLowerCase() === customer.email.toLowerCase()) ||
+      e.customer_id === customer.id
+    ) || [];
+
+    for (const n of notifs) {
+      if (!n.read) {
+        db.update('email_notifications', n.id, {
+          read: true,
+          is_read: true
+        });
+      }
+    }
+
+    return res.json({ success: true, message: 'All notifications marked as read' });
   } catch (err) {
     next(err);
   }

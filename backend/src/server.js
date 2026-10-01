@@ -15,6 +15,14 @@ import emailRoutes from './routes/emailRoutes.js';
 import customerPortalRoutes from './routes/customerPortalRoutes.js';
 import supervisorRoutes from './routes/supervisorRoutes.js';
 import autonomyRoutes from './routes/autonomyRoutes.js';
+import {
+  getCustomerTickets,
+  createCustomerTicket,
+  getCustomerNotifications,
+  markNotificationRead,
+  markAllNotificationsRead
+} from './controllers/customerPortalController.js';
+import { requireAuth } from './middleware/authMiddleware.js';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
 import { db } from './db/store.js';
@@ -127,6 +135,14 @@ app.use('/api/supervisor', supervisorRoutes);
 app.use('/api/autonomy', autonomyRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api', systemRoutes);
+
+// Root Aliases for Issues & Notifications (Strict session-derived authorization)
+app.get('/api/issues', requireAuth, getCustomerTickets);
+app.post('/api/issues', requireAuth, createCustomerTicket);
+app.get('/api/notifications', requireAuth, getCustomerNotifications);
+app.patch('/api/notifications/:id/read', requireAuth, markNotificationRead);
+app.patch('/api/notifications/read-all', requireAuth, markAllNotificationsRead);
+app.post('/api/notifications/mark-all-read', requireAuth, markAllNotificationsRead);
 
 // Root fallback / ping
 app.get('/', (req, res) => {
