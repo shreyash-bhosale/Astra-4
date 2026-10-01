@@ -401,6 +401,30 @@ export function handleClientMock(endpoint, options = {}) {
   }
 
   // Customers, Orders, Policies, Activity, Health
+  if (endpoint === '/activity/metrics') {
+    const totalResolved = store.tickets.filter(t => t.status === 'RESOLVED').length;
+    return {
+      activeWorkflows: store.tickets.filter(t => t.status === 'AI_PROCESSING' || t.status === 'WAITING_APPROVAL').length,
+      totalWorkflows: store.tickets.length,
+      resolvedWorkflows: totalResolved,
+      autonomousResolutions: totalResolved,
+      humanInterventions: store.approvals.length,
+      autonomousRate: '88%',
+      humanInterventionRate: '25%',
+      verificationPassRate: '96%',
+      recoveryRate: '100%',
+      agentPerformance: [
+        { badge: '◉', name: 'Orchestrator Agent', totalEvents: 14, successRate: '100%' },
+        { badge: '△', name: 'Triage Agent', totalEvents: 12, successRate: '98%' },
+        { badge: '⌕', name: 'Investigation Agent', totalEvents: 12, successRate: '95%' },
+        { badge: '▣', name: 'Policy Agent', totalEvents: 12, successRate: '100%' },
+        { badge: '⚡', name: 'Action Agent', totalEvents: 10, successRate: '92%' },
+        { badge: '✦', name: 'Communication Agent', totalEvents: 12, successRate: '100%' },
+        { badge: '✓', name: 'Verification Agent', totalEvents: 12, successRate: '97%' }
+      ],
+      recentAuditLogs: store.audit_logs.slice(0, 15)
+    };
+  }
   if (endpoint.startsWith('/customers')) return store.customers;
   if (endpoint.startsWith('/orders')) return store.orders;
   if (endpoint.startsWith('/policies')) return store.policies;

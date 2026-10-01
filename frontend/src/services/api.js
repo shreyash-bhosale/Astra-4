@@ -292,6 +292,10 @@ class ApiClient {
     return this.request('/activity');
   }
 
+  getAgenticMetrics() {
+    return this.request('/activity/metrics');
+  }
+
   getHealth() {
     return this.request('/health');
   }

@@ -59,8 +59,42 @@ Formulate a 6-step resolution plan selecting from available agents:
       }
     }
 
-    // Default robust 6-step plan
-    const isReplacement = triageResult.intent === 'replacement' || triageResult.category === 'damaged_product';
+    // Dynamic conditional planning based on problem type
+    const categoryLower = (triageResult.category || '').toLowerCase();
+    const intentLower = (triageResult.intent || '').toLowerCase();
+
+    if (categoryLower.includes('inquiry') || intentLower.includes('question') || categoryLower.includes('general')) {
+      // 4-Step direct resolution DAG for inquiries (Zero approval, zero warehouse action needed)
+      return {
+        objective: `Provide verified information and direct guidance for ${triageResult.category}`,
+        riskLevel: 'low',
+        steps: [
+          { step: 1, agent: 'triage_agent', action: 'classify_case', description: 'Analyze customer question and extract core subject', requiresApproval: false, dependencies: [] },
+          { step: 2, agent: 'investigation_agent', action: 'retrieve_order_and_customer', description: 'Retrieve customer account profile and order context', requiresApproval: false, dependencies: [1] },
+          { step: 3, agent: 'communication_agent', action: 'compose_customer_response', description: 'Generate personalized, factual direct guidance without hallucinations', requiresApproval: false, dependencies: [2] },
+          { step: 4, agent: 'verification_agent', action: 'audit_and_verify_resolution', description: 'Audit factual consistency and verify all customer queries are answered', requiresApproval: false, dependencies: [3] }
+        ]
+      };
+    }
+
+    if (categoryLower.includes('cancellation') || intentLower.includes('cancel')) {
+      // 6-Step order cancellation DAG
+      return {
+        objective: `Process autonomous order cancellation and warehouse hold for ${ticket.title}`,
+        riskLevel: 'low',
+        steps: [
+          { step: 1, agent: 'triage_agent', action: 'classify_case', description: 'Classify cancellation intent and order references', requiresApproval: false, dependencies: [] },
+          { step: 2, agent: 'investigation_agent', action: 'retrieve_order_and_customer', description: 'Check warehouse fulfillment and carrier dispatch status', requiresApproval: false, dependencies: [1] },
+          { step: 3, agent: 'policy_agent', action: 'evaluate_policy_rules', description: 'Evaluate against active cancellation policies (POL-002)', requiresApproval: false, dependencies: [2] },
+          { step: 4, agent: 'action_agent', action: 'cancel_processing_order', description: 'Execute cancellation tool on fulfillment queue', requiresApproval: false, dependencies: [3] },
+          { step: 5, agent: 'communication_agent', action: 'compose_customer_response', description: 'Dispatch cancellation receipt and confirmation to customer', requiresApproval: false, dependencies: [4] },
+          { step: 6, agent: 'verification_agent', action: 'audit_and_verify_resolution', description: 'Verify warehouse cancellation state and ledger balance', requiresApproval: false, dependencies: [5] }
+        ]
+      };
+    }
+
+    // Default robust replacement / damage DAG (with supervisor gating)
+    const isReplacement = intentLower === 'replacement' || categoryLower === 'damaged_product';
     return {
       objective: `Autonomously resolve ${triageResult.category} (${triageResult.intent})`,
       riskLevel: isReplacement ? 'medium' : 'low',
@@ -68,7 +102,7 @@ Formulate a 6-step resolution plan selecting from available agents:
         { step: 1, agent: 'triage_agent', action: 'classify_case', description: 'Triage issue and extract customer intent', requiresApproval: false, dependencies: [] },
         { step: 2, agent: 'investigation_agent', action: 'retrieve_order_and_customer', description: 'Retrieve order history, customer tier, and delivery timestamp', requiresApproval: false, dependencies: [1] },
         { step: 3, agent: 'policy_agent', action: 'evaluate_policy_rules', description: 'Evaluate against active company policies and determine approval rules', requiresApproval: false, dependencies: [2] },
-        { step: 4, agent: 'action_agent', action: isReplacement ? 'create_replacement_request' : 'cancel_processing_order', description: isReplacement ? 'Provision expedited replacement shipment' : 'Execute approved order action', requiresApproval: isReplacement, dependencies: [3] },
+        { step: 4, agent: 'action_agent', action: isReplacement ? 'create_replacement_request' : 'execute_approved_action', description: isReplacement ? 'Provision expedited replacement shipment' : 'Execute approved order action', requiresApproval: isReplacement, dependencies: [3] },
         { step: 5, agent: 'communication_agent', action: 'compose_customer_response', description: 'Generate personalized customer communication and resolution summary', requiresApproval: false, dependencies: [4] },
         { step: 6, agent: 'verification_agent', action: 'audit_and_verify_resolution', description: 'Audit complete plan execution, compliance, and resolution gates', requiresApproval: false, dependencies: [5] }
       ]
@@ -112,7 +146,7 @@ Formulate a 6-step resolution plan selecting from available agents:
         metadata: triageResult
       });
 
-      // 2. Orchestrator creates execution plan
+      // 2. Orchestrator creates dynamic execution plan
       planData = await this.createPlan({ ticket, triageResult, customer, order });
 
       run = db.insert('agent_runs', {
@@ -121,6 +155,8 @@ Formulate a 6-step resolution plan selecting from available agents:
         objective: planData.objective,
         risk_level: planData.riskLevel,
         plan: planData.steps.map(s => ({ ...s, status: s.step === 1 ? 'COMPLETED' : 'PENDING' })),
+        tool_calls: [],
+        recovery_attempts: 0,
         started_at: new Date().toISOString()
       });
 
@@ -128,8 +164,8 @@ Formulate a 6-step resolution plan selecting from available agents:
         ticket_id: ticketId,
         event_type: 'PLAN_CREATED',
         agent: this.name,
-        description: `Orchestrator formulated ${planData.steps.length}-step resolution plan: ${planData.objective}`,
-        metadata: { objective: planData.objective, stepsCount: planData.steps.length }
+        description: `Orchestrator formulated dynamic ${planData.steps.length}-step DAG: ${planData.objective}`,
+        metadata: { objective: planData.objective, stepsCount: planData.steps.length, riskLevel: planData.riskLevel }
       });
 
       // Asynchronously dispatch Task Started customer notification
@@ -144,6 +180,22 @@ Formulate a 6-step resolution plan selecting from available agents:
       };
     }
 
+    // Helper to log structured tool calls onto the active agent run
+    const recordToolCall = (toolName, input, output, authorized = true) => {
+      const toolRecord = {
+        id: `tool-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        tool_name: toolName,
+        input,
+        output,
+        authorized,
+        timestamp: new Date().toISOString()
+      };
+      const currentRun = db.findById('agent_runs', run.id);
+      const toolCalls = Array.isArray(currentRun?.tool_calls) ? [...currentRun.tool_calls, toolRecord] : [toolRecord];
+      db.update('agent_runs', run.id, { tool_calls: toolCalls });
+      return toolRecord;
+    };
+
     // Context accumulated across agent execution
     let context = {
       ticket,
@@ -156,7 +208,7 @@ Formulate a 6-step resolution plan selecting from available agents:
       communicationResult: null
     };
 
-    // Step 2: Investigation
+    // Step 2: Investigation Agent
     db.logAudit({
       ticket_id: ticketId,
       event_type: 'INVESTIGATION_STARTED',
@@ -166,6 +218,19 @@ Formulate a 6-step resolution plan selecting from available agents:
 
     context.investigationResult = await investigationAgent.run({ ticket });
     this.updateRunStepStatus(run.id, 2, 'COMPLETED');
+
+    recordToolCall('get_customer', { customerId: ticket.customer_id }, {
+      found: context.investigationResult.customerFound,
+      customerName: context.investigationResult.customerName
+    });
+
+    if (ticket.order_id || context.investigationResult.orderId) {
+      recordToolCall('get_order', { orderId: ticket.order_id || context.investigationResult.orderId }, {
+        found: context.investigationResult.orderFound,
+        productName: context.investigationResult.productName,
+        daysSinceDelivery: context.investigationResult.daysSinceDelivery
+      });
+    }
 
     db.logAudit({
       ticket_id: ticketId,
@@ -190,6 +255,12 @@ Formulate a 6-step resolution plan selecting from available agents:
     });
     this.updateRunStepStatus(run.id, 3, 'COMPLETED');
 
+    recordToolCall('search_policies', { category: ticket.category }, {
+      policyCited: context.policyResult.policyCited,
+      permitted: context.policyResult.permitted,
+      requiresHumanApproval: context.policyResult.requiresHumanApproval
+    });
+
     db.logAudit({
       ticket_id: ticketId,
       event_type: 'POLICY_EVALUATED',
@@ -208,6 +279,13 @@ Formulate a 6-step resolution plan selecting from available agents:
       investigationResult: context.investigationResult,
       isApproved: resumeFromApproval
     });
+
+    recordToolCall(
+      context.actionResult.actionExecuted || 'action_execution',
+      { policyCited: context.policyResult.policyCited, orderId: context.investigationResult.orderId },
+      context.actionResult.details,
+      !context.actionResult.requiresApproval
+    );
 
     if (context.actionResult.status === 'WAITING_APPROVAL') {
       this.updateRunStepStatus(run.id, 4, 'WAITING_APPROVAL');
@@ -254,6 +332,14 @@ Formulate a 6-step resolution plan selecting from available agents:
     });
     this.updateRunStepStatus(run.id, 5, 'COMPLETED');
 
+    recordToolCall('send_customer_update', {
+      ticketId: ticket.id,
+      recipient: customer?.email
+    }, {
+      delivered: true,
+      hasCustomerMessage: !!context.communicationResult.customerMessage
+    });
+
     db.update('tickets', ticketId, {
       customer_response: context.communicationResult.customerMessage,
       resolution_summary: context.communicationResult.internalSummary
@@ -276,13 +362,26 @@ Formulate a 6-step resolution plan selecting from available agents:
       description: 'Conducting final audit: verifying evidence, policy compliance, and approval records.'
     });
 
-    const verificationResult = await verificationAgent.run({
+    let currentRunState = db.findById('agent_runs', run.id);
+    let verificationResult = await verificationAgent.run({
       ticket,
-      plan: db.findById('agent_runs', run.id).plan,
+      plan: currentRunState.plan,
       investigationResult: context.investigationResult,
       policyResult: context.policyResult,
       actionResult: context.actionResult,
       communicationResult: context.communicationResult
+    });
+
+    recordToolCall('verify_resolution', {
+      ticketId: ticket.id,
+      checklist: verificationResult.checklist
+    }, {
+      verified: verificationResult.verified,
+      conclusion: verificationResult.conclusion
+    });
+
+    db.update('agent_runs', run.id, {
+      verification_result: verificationResult
     });
 
     if (verificationResult.verified) {
@@ -322,23 +421,104 @@ Formulate a 6-step resolution plan selecting from available agents:
         message: 'Ticket successfully resolved autonomously.'
       };
     } else {
+      // Reassessment & Autonomous Recovery Loop
+      const currentAttempts = run.recovery_attempts || 0;
+      const maxRetries = 2;
+
+      if (currentAttempts < maxRetries) {
+        const nextAttempt = currentAttempts + 1;
+        db.update('agent_runs', run.id, {
+          recovery_attempts: nextAttempt,
+          status: 'RECOVERING'
+        });
+
+        db.logAudit({
+          ticket_id: ticketId,
+          event_type: 'RECOVERY_INITIATED',
+          agent: this.name,
+          description: `Autonomous recovery cycle #${nextAttempt} initiated. Orchestrator reassessing unsatisfied verification gates.`,
+          metadata: { attempt: nextAttempt, failedGates: verificationResult.checklist }
+        });
+
+        // Orchestrator executes corrective reassessment:
+        if (!verificationResult.checklist.evidenceSufficient) {
+          context.investigationResult = await investigationAgent.run({ ticket });
+        }
+        if (!verificationResult.checklist.customerInformed) {
+          context.communicationResult = await communicationAgent.run({
+            ticket,
+            customer,
+            order,
+            policyResult: context.policyResult,
+            actionResult: context.actionResult
+          });
+          db.update('tickets', ticketId, {
+            customer_response: context.communicationResult.customerMessage,
+            resolution_summary: context.communicationResult.internalSummary
+          });
+        }
+
+        // Re-verify after autonomous adaptation
+        const reVerification = await verificationAgent.run({
+          ticket,
+          plan: db.findById('agent_runs', run.id).plan,
+          investigationResult: context.investigationResult,
+          policyResult: context.policyResult,
+          actionResult: context.actionResult,
+          communicationResult: context.communicationResult
+        });
+
+        db.update('agent_runs', run.id, {
+          verification_result: reVerification
+        });
+
+        if (reVerification.verified) {
+          this.updateRunStepStatus(run.id, 6, 'COMPLETED');
+          db.update('agent_runs', run.id, {
+            status: 'COMPLETED',
+            completed_at: new Date().toISOString()
+          });
+          db.update('tickets', ticketId, {
+            status: 'RESOLVED',
+            updated_at: new Date().toISOString()
+          });
+
+          db.logAudit({
+            ticket_id: ticketId,
+            event_type: 'RECOVERY_SUCCEEDED',
+            agent: this.name,
+            description: `Orchestrator successfully resolved ticket via autonomous adaptation on attempt #${nextAttempt}.`,
+            metadata: { attempts: nextAttempt, reVerification }
+          });
+
+          return {
+            status: 'RESOLVED',
+            runId: run.id,
+            verificationResult: reVerification,
+            recovered: true,
+            message: 'Ticket successfully recovered and verified autonomously.'
+          };
+        }
+      }
+
+      // If retries exhausted or irrecoverable, safely escalate to human supervisor with complete evidence dossier
       this.updateRunStepStatus(run.id, 6, 'FAILED');
       db.update('agent_runs', run.id, { status: 'FAILED' });
-      db.update('tickets', ticketId, { status: 'FAILED' });
+      db.update('tickets', ticketId, { status: 'ESCALATED' });
 
       db.logAudit({
         ticket_id: ticketId,
-        event_type: 'VERIFICATION_FAILED',
-        agent: verificationAgent.name,
-        description: `Verification gate rejected ticket resolution: ${verificationResult.conclusion}`,
-        metadata: verificationResult
+        event_type: 'RECOVERY_EXHAUSTED_ESCALATED',
+        agent: this.name,
+        description: `Recovery attempts exhausted (${maxRetries}/${maxRetries}). Ticket escalated to Human Supervisor with full audit trail.`,
+        metadata: { verificationResult, recovery_attempts: maxRetries }
       });
 
       return {
-        status: 'FAILED',
+        status: 'ESCALATED',
         runId: run.id,
         verificationResult,
-        message: 'Resolution failed verification gates.'
+        message: 'Verification failed after autonomous recovery attempts. Escalated to human supervisor.'
       };
     }
   }

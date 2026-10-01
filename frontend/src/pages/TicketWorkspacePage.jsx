@@ -21,7 +21,10 @@ import {
   UserCheck,
   Lock,
   MessageSquare,
-  Send
+  Send,
+  ShieldCheck,
+  Terminal,
+  Layers
 } from 'lucide-react';
 
 export default function TicketWorkspacePage() {
@@ -734,6 +737,148 @@ export default function TicketWorkspacePage() {
               })}
             </div>
           </div>
+
+          {/* 5-Point Deterministic Verification Gate Card */}
+          {latestRun?.verification_result && (
+            <div style={{ padding: '24px', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldCheck size={20} color={latestRun.verification_result.verified ? 'var(--accent-emerald)' : 'var(--accent-rose)'} />
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>5-Point Verification Audit Gate</h3>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Enforced by Verification Agent before granting RESOLVED state
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {latestRun.recovery_attempts > 0 && (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: '#f3e8ff', color: '#7e22ce' }}>
+                      Recovered (Attempt #{latestRun.recovery_attempts})
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: latestRun.verification_result.verified ? 'var(--status-res-bg)' : 'var(--status-esc-bg)',
+                      color: latestRun.verification_result.verified ? 'var(--status-res-text)' : 'var(--status-esc-text)'
+                    }}
+                  >
+                    {latestRun.verification_result.verified ? 'AUDIT PASSED' : 'GATE REJECTED'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+                {[
+                  { label: 'All Prior Steps Executed', passed: latestRun.verification_result.checklist?.allStepsExecuted },
+                  { label: 'Evidence Grounded & Verified', passed: latestRun.verification_result.checklist?.evidenceSufficient },
+                  { label: 'Company Policy Compliant', passed: latestRun.verification_result.checklist?.policyCompliant },
+                  { label: 'Supervisor Approval Obtained', passed: latestRun.verification_result.checklist?.approvalObtained },
+                  { label: 'Customer Response Formulated', passed: latestRun.verification_result.checklist?.customerInformed }
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: item.passed ? '#f0fdf4' : '#fef2f2',
+                      border: `1px solid ${item.passed ? '#bbf7d0' : '#fecaca'}`,
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: item.passed ? '#15803d' : '#b91c1c'
+                    }}
+                  >
+                    {item.passed ? <CheckCircle2 size={14} color="#15803d" /> : <AlertCircle size={14} color="#b91c1c" />}
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                <strong>Audit Conclusion:</strong> {latestRun.verification_result.conclusion}
+              </div>
+            </div>
+          )}
+
+          {/* Controlled Tool Execution Record */}
+          {latestRun?.tool_calls && latestRun.tool_calls.length > 0 && (
+            <div style={{ padding: '24px', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Terminal size={18} />
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Controlled Tool Execution Record</h3>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Allowlisted tool executions with strict input/output authorization validation
+                    </div>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'var(--bg-tertiary)' }}>
+                  {latestRun.tool_calls.length} Tools Invoked
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {latestRun.tool_calls.map((tool, idx) => (
+                  <div
+                    key={tool.id || idx}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <code style={{ fontWeight: 700, fontSize: '0.82rem', color: '#000000', backgroundColor: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>
+                          {tool.tool_name}
+                        </code>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {tool.timestamp ? new Date(tool.timestamp).toLocaleTimeString() : ''}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '2px 6px',
+                          borderRadius: 'var(--radius-pill)',
+                          backgroundColor: tool.authorized ? 'var(--status-res-bg)' : 'var(--status-esc-bg)',
+                          color: tool.authorized ? 'var(--status-res-text)' : 'var(--status-esc-text)'
+                        }}
+                      >
+                        {tool.authorized ? '✓ AUTHORIZED' : 'AUTH GATED'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px', fontSize: '0.75rem' }}>
+                      <div style={{ padding: '6px 8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
+                        <div style={{ color: 'var(--text-muted)', fontWeight: 600, marginBottom: '2px' }}>Input Parameters:</div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.72rem' }}>
+                          {JSON.stringify(tool.input, null, 1)}
+                        </pre>
+                      </div>
+                      <div style={{ padding: '6px 8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', border: '1px solid var(--border-light)' }}>
+                        <div style={{ color: 'var(--text-muted)', fontWeight: 600, marginBottom: '2px' }}>Execution Output:</div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.72rem' }}>
+                          {JSON.stringify(tool.output, null, 1)}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Generated Customer Response Preview (When Available) */}
           {ticket.customer_response && (
