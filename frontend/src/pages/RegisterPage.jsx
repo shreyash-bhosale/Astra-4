@@ -162,11 +162,11 @@ export default function RegisterPage() {
 
             {isEmailExistingError && (
               <div style={{ display: 'flex', gap: '12px', marginTop: '4px', paddingLeft: '24px' }}>
-                <Link to="/login" style={{ fontWeight: 700, color: '#b91c1c', textDecoration: 'underline' }}>
+                <Link to="/customer/login" style={{ fontWeight: 700, color: '#b91c1c', textDecoration: 'underline' }}>
                   Sign In
                 </Link>
                 <span>•</span>
-                <Link to="/forgot-password" style={{ fontWeight: 700, color: '#b91c1c', textDecoration: 'underline' }}>
+                <Link to="/customer/forgot-password" style={{ fontWeight: 700, color: '#b91c1c', textDecoration: 'underline' }}>
                   Forgot Password
                 </Link>
               </div>
@@ -429,7 +429,7 @@ export default function RegisterPage() {
         {/* Link back to Sign In */}
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ fontWeight: 700, color: 'var(--text-primary)', textDecoration: 'none' }}>
+          <Link to="/customer/login" style={{ fontWeight: 700, color: 'var(--text-primary)', textDecoration: 'none' }}>
             Sign In
           </Link>
         </div>

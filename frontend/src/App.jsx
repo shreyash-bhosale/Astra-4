@@ -4,9 +4,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
 import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
+import LoginSelectionPage from './pages/LoginSelectionPage';
+import CustomerLoginPage from './pages/CustomerLoginPage';
+import StaffLoginPage from './pages/StaffLoginPage';
 import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import CustomerForgotPasswordPage from './pages/CustomerForgotPasswordPage';
+import StaffForgotPasswordPage from './pages/StaffForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import CustomerLayout from './layouts/CustomerLayout';
@@ -80,10 +83,11 @@ function StaffProtectedRoute({ children }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const currentPath = window.location.pathname;
+    return <Navigate to={`/staff/login?redirect=${encodeURIComponent(currentPath)}`} replace />;
   }
 
-  // If a pure customer tries to open staff dashboard, route them gracefully to customer portal
+  // If a customer tries to open staff dashboard, route them gracefully to customer portal
   if (user.role === 'customer') {
     return <Navigate to="/customer" replace />;
   }
@@ -101,7 +105,7 @@ function CustomerProtectedRoute({ children }) {
 
   if (!user) {
     const currentPath = window.location.pathname;
-    return <Navigate to={`/login?redirect=${encodeURIComponent(currentPath)}`} replace />;
+    return <Navigate to={`/customer/login?redirect=${encodeURIComponent(currentPath)}`} replace />;
   }
 
   return <CustomerLayout>{children}</CustomerLayout>;
@@ -115,18 +119,31 @@ export default function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/login" element={<LoginSelectionPage />} />
+            
+            {/* Customer Authentication */}
+            <Route path="/customer/login" element={<CustomerLoginPage />} />
+            <Route path="/customer/register" element={<RegisterPage />} />
+            <Route path="/customer/forgot-password" element={<CustomerForgotPasswordPage />} />
+            
+            {/* Staff Authentication */}
+            <Route path="/staff/login" element={<StaffLoginPage />} />
+            <Route path="/staff/forgot-password" element={<StaffForgotPasswordPage />} />
+
+            {/* Legacy Auth Fallbacks */}
+            <Route path="/register" element={<Navigate to="/customer/register" replace />} />
+            <Route path="/forgot-password" element={<Navigate to="/customer/forgot-password" replace />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Customer Portal Routes */}
             <Route path="/customer" element={<CustomerProtectedRoute><CustomerHomePage /></CustomerProtectedRoute>} />
+            <Route path="/customer/dashboard" element={<Navigate to="/customer" replace />} />
             <Route path="/customer/issues" element={<CustomerProtectedRoute><CustomerIssuesPage /></CustomerProtectedRoute>} />
             <Route path="/customer/issues/new" element={<CustomerProtectedRoute><RaiseIssuePage /></CustomerProtectedRoute>} />
             <Route path="/customer/issues/:id" element={<CustomerProtectedRoute><CustomerIssueDetailPage /></CustomerProtectedRoute>} />
             <Route path="/customer/orders" element={<CustomerProtectedRoute><CustomerOrdersPage /></CustomerProtectedRoute>} />
             <Route path="/customer/support" element={<CustomerProtectedRoute><CustomerAISupportPage /></CustomerProtectedRoute>} />
+            <Route path="/customer/ai-support" element={<Navigate to="/customer/support" replace />} />
             <Route path="/customer/profile" element={<CustomerProtectedRoute><CustomerProfilePage /></CustomerProtectedRoute>} />
 
             {/* Staff / Admin / Operations Routes */}
@@ -139,8 +156,22 @@ export default function App() {
             <Route path="/policies" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><PoliciesPage /></Suspense></StaffProtectedRoute>} />
             <Route path="/activity" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><ActivityPage /></Suspense></StaffProtectedRoute>} />
             <Route path="/control-center" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><AIControlCenterPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/ai-control-center" element={<Navigate to="/control-center" replace />} />
             <Route path="/supervisor" element={<Navigate to="/control-center" replace />} />
             <Route path="/settings" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><SettingsPage /></Suspense></StaffProtectedRoute>} />
+
+            {/* Staff Aliases */}
+            <Route path="/staff" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/staff/dashboard" element={<StaffProtectedRoute><DashboardPage /></StaffProtectedRoute>} />
+            <Route path="/staff/tickets" element={<StaffProtectedRoute><TicketsListPage /></StaffProtectedRoute>} />
+            <Route path="/staff/tickets/:id" element={<StaffProtectedRoute><TicketWorkspacePage /></StaffProtectedRoute>} />
+            <Route path="/staff/approvals" element={<StaffProtectedRoute><ApprovalsPage /></StaffProtectedRoute>} />
+            <Route path="/staff/customers" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><CustomersPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/staff/orders" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><OrdersPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/staff/policies" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><PoliciesPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/staff/activity" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><ActivityPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/staff/ai-control-center" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><AIControlCenterPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/staff/settings" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><SettingsPage /></Suspense></StaffProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -119,7 +119,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, scope = 'any') => {
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Real Supabase Authentication
@@ -136,12 +136,21 @@ export const AuthProvider = ({ children }) => {
 
         if (data?.session && data?.user) {
           const formatted = formatUserFromSupabase(data.user);
+
+          // Prevent role confusion: If attempting to login via /staff/login with customer account
+          if (scope === 'staff' && formatted.role === 'customer') {
+            await supabase.auth.signOut();
+            api.setToken(null);
+            setUser(null);
+            throw new Error('Staff access required: This account does not have permission to access the ResolveAI Staff Console.');
+          }
+
           api.setToken(data.session.access_token);
           setUser(formatted);
           return formatted;
         }
       } catch (err) {
-        // If Supabase rejected credentials or email not confirmed, throw mapped error
+        // If Supabase rejected credentials or email not confirmed or staff access denied, throw mapped error
         if (err.message && !err.message.includes('fetch')) {
           throw err;
         }
@@ -152,7 +161,7 @@ export const AuthProvider = ({ children }) => {
 
     // 2. Backend API fallback
     try {
-      const res = await api.login({ email: cleanEmail, password });
+      const res = await api.login({ email: cleanEmail, password, scope });
       api.setToken(res.token);
       setUser(res.user);
       return res.user;
@@ -213,7 +222,7 @@ export const AuthProvider = ({ children }) => {
     return await api.resetPassword(data);
   };
 
-  const logout = async () => {
+  const logout = async (redirectPath = null) => {
     try {
       if (isSupabaseConfigured() && supabase) {
         await supabase.auth.signOut();
@@ -223,6 +232,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       api.setToken(null);
       setUser(null);
+      if (redirectPath) {
+        window.location.href = redirectPath;
+      }
     }
   };
 

@@ -13,7 +13,7 @@ import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 const router = Router();
 
 // Read settings allowed for authenticated staff/managers/admins
-router.get('/settings', requireAuth, getAutonomySettings);
+router.get('/settings', requireAuth, requireRole(['agent', 'manager', 'admin']), getAutonomySettings);
 
 // Protected Operations for Admin & Operations Manager
 router.patch('/settings', requireAuth, requireRole(['admin', 'manager']), updateAutonomySettings);

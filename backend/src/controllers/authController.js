@@ -134,6 +134,13 @@ export const login = async (req, res, next) => {
             });
           }
 
+          if (validated.scope === 'staff' && user.role === 'customer') {
+            return res.status(403).json({
+              error: 'Staff access required',
+              message: 'This account does not have permission to access the ResolveAI Staff Console.'
+            });
+          }
+
           const token = authData.session?.access_token || jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             config.jwtSecret,
@@ -172,6 +179,13 @@ export const login = async (req, res, next) => {
     const isValid = bcrypt.compareSync(validated.password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (validated.scope === 'staff' && user.role === 'customer') {
+      return res.status(403).json({
+        error: 'Staff access required',
+        message: 'This account does not have permission to access the ResolveAI Staff Console.'
+      });
     }
 
     const token = jwt.sign(

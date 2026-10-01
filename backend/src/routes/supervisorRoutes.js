@@ -6,14 +6,17 @@ import {
   getSupervisorEvents,
   postSupervisorQuery
 } from '../controllers/supervisorController.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-router.get('/status', requireAuth, getSupervisorStatus);
-router.get('/agents', requireAuth, getSupervisorAgents);
-router.get('/workflows', requireAuth, getSupervisorWorkflows);
-router.get('/events', requireAuth, getSupervisorEvents);
-router.post('/query', requireAuth, postSupervisorQuery);
+// Internal Supervisor Fleet Control & Telemetry (Staff only)
+router.use(requireAuth, requireRole(['agent', 'manager', 'admin']));
+
+router.get('/status', getSupervisorStatus);
+router.get('/agents', getSupervisorAgents);
+router.get('/workflows', getSupervisorWorkflows);
+router.get('/events', getSupervisorEvents);
+router.post('/query', postSupervisorQuery);
 
 export default router;

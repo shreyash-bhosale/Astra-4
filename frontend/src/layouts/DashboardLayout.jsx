@@ -232,7 +232,7 @@ export default function DashboardLayout({ children }) {
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={() => logout('/staff/login')}
             title="Log Out"
             style={{
               padding: '6px',

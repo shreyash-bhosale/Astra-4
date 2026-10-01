@@ -284,12 +284,24 @@ export function handleClientMock(endpoint, options = {}) {
   // Auth: /auth/login
   if (endpoint === '/auth/login' && method === 'POST') {
     const cleanEmail = (body.email || '').trim().toLowerCase();
-    const user = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+    let user = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      const cust = (store.customers || []).find(c => c.email.toLowerCase() === cleanEmail);
+      if (cust) {
+        user = { id: `usr-${cust.id}`, name: cust.name, email: cust.email, role: 'customer' };
+      }
+    }
     if (user) {
+      if (body.scope === 'staff' && user.role === 'customer') {
+        throw new Error('Staff access required: This account does not have permission to access the ResolveAI Staff Console.');
+      }
       if (user.password && body.password && user.password !== body.password) {
         throw new Error('Invalid email or password');
       }
       return { token: 'mock-jwt-demo-token', user };
+    }
+    if (body.scope === 'staff') {
+      throw new Error('Invalid staff credentials. Authorized personnel only.');
     }
     return { token: 'mock-jwt-demo-token', user: store.users[0] };
   }
@@ -301,8 +313,18 @@ export function handleClientMock(endpoint, options = {}) {
     if (existing) {
       throw new Error('User already exists with this email');
     }
-    const newUser = { id: `usr-${Date.now()}`, name: body.name, email: cleanEmail, role: body.role || 'agent', password: body.password };
+    // Public registration STRICTLY forces role = 'customer'
+    const newUser = { id: `usr-${Date.now()}`, name: body.name, email: cleanEmail, role: 'customer', password: body.password };
     store.users.push(newUser);
+    store.customers = store.customers || [];
+    store.customers.push({
+      id: `cust-${Date.now().toString(36)}`,
+      name: body.name,
+      email: cleanEmail,
+      phone: body.phone || '',
+      tier: 'Standard',
+      company: 'Individual Consumer'
+    });
     saveStorage(store);
     return { token: 'mock-jwt-demo-token', user: newUser };
   }

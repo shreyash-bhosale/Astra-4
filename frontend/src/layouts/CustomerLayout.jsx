@@ -333,8 +333,7 @@ export default function CustomerLayout({ children }) {
 
             <button
               onClick={() => {
-                logout();
-                navigate('/login');
+                logout('/customer/login');
               }}
               aria-label="Sign out"
               title="Sign Out"
