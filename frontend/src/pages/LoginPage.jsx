@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, UserCheck, Shield, Sparkles, AlertCircle, User } from 'lucide-react';
+import { ArrowRight, AlertCircle } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function LoginPage() {
@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithDemo } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const getSafeRedirect = (userRole) => {
@@ -31,19 +31,6 @@ export default function LoginPage() {
       navigate(getSafeRedirect(loggedUser?.role));
     } catch (err) {
       setError(err.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickDemo = async (role) => {
-    setError('');
-    setLoading(true);
-    try {
-      const loggedUser = await loginWithDemo(role);
-      navigate(getSafeRedirect(role || loggedUser?.role));
-    } catch (err) {
-      setError(err.message || 'Demo login failed');
     } finally {
       setLoading(false);
     }
@@ -102,90 +89,6 @@ export default function LoginPage() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '6px' }}>
             Autonomous Customer Operations Platform
           </p>
-        </div>
-
-        {/* 1-Click Quick Demo Personas */}
-        <div style={{ marginBottom: '28px', padding: '16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-            <Sparkles size={14} color="var(--accent-purple)" />
-            <span>1-Click Hackathon Evaluator Login</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => handleQuickDemo('agent')}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UserCheck size={16} />
-                <span>Sarah Connor (Support Agent)</span>
-              </div>
-              <ArrowRight size={14} color="var(--text-muted)" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickDemo('manager')}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Shield size={16} />
-                <span>James Rodriguez (Manager / Approver)</span>
-              </div>
-              <ArrowRight size={14} color="var(--text-muted)" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickDemo('customer')}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 12px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <User size={16} />
-                <span>Elena Rostova (Customer Persona)</span>
-              </div>
-              <ArrowRight size={14} color="var(--text-muted)" />
-            </button>
-          </div>
         </div>
 
         {error && (
