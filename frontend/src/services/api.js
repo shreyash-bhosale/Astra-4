@@ -300,6 +300,13 @@ class ApiClient {
     return this.request('/settings');
   }
 
+  updateSettings(data) {
+    return this.request('/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  }
+
   resetDemo() {
     return this.request('/reset', {
       method: 'POST'

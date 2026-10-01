@@ -19,12 +19,31 @@ export const getSettings = (req, res) => {
   const policiesCount = db.find('policies').length;
   const approvalsCount = db.find('approvals').length;
 
+  const defaultWorkspace = {
+    id: 'ws-default',
+    orgName: 'ResolveAI Operations',
+    publicEmail: 'support@resolveai.io',
+    description: 'Autonomous customer operations and intelligent resolution workspace.',
+    websiteUrl: 'https://resolveai.io',
+    location: 'San Francisco, CA',
+    maxAgentSteps: 10,
+    safetyGateMode: 'Strict Human-in-the-Loop',
+    notifications: {
+      inApp: true,
+      email: true,
+      voice: false
+    }
+  };
+
+  const stored = db.findById('workspace_settings', 'ws-default') || defaultWorkspace;
+
   return res.json({
     geminiModel: config.geminiModel,
     hasApiKey: !!config.geminiApiKey,
-    maxAgentSteps: 10,
+    maxAgentSteps: stored.maxAgentSteps || 10,
     maxRetries: 2,
     approvalPolicy: 'Strict Safety Gate (Physical replacements & refunds require human review)',
+    workspace: stored,
     stats: {
       usersCount,
       ticketsCount,
@@ -32,6 +51,31 @@ export const getSettings = (req, res) => {
       approvalsCount
     }
   });
+};
+
+export const updateSettings = (req, res) => {
+  const updates = req.body || {};
+  let current = db.findById('workspace_settings', 'ws-default');
+  if (!current) {
+    current = db.insert('workspace_settings', {
+      id: 'ws-default',
+      orgName: updates.orgName || 'ResolveAI Operations',
+      publicEmail: updates.publicEmail || 'support@resolveai.io',
+      description: updates.description || 'Autonomous customer operations and intelligent resolution workspace.',
+      websiteUrl: updates.websiteUrl || 'https://resolveai.io',
+      location: updates.location || 'San Francisco, CA',
+      maxAgentSteps: Number(updates.maxAgentSteps) || 10,
+      safetyGateMode: updates.safetyGateMode || 'Strict Human-in-the-Loop',
+      notifications: updates.notifications || { inApp: true, email: true, voice: false },
+      updated_at: new Date().toISOString()
+    });
+  } else {
+    current = db.update('workspace_settings', 'ws-default', {
+      ...updates,
+      updated_at: new Date().toISOString()
+    });
+  }
+  return res.json({ success: true, settings: current });
 };
 
 export const resetDatabase = (req, res) => {
