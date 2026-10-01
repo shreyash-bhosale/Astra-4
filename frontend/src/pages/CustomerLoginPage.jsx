@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, AlertCircle, User, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, AlertCircle, User, CheckCircle2, Sparkles, Copy, Check } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function CustomerLoginPage() {
@@ -10,6 +10,7 @@ export default function CustomerLoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -20,6 +21,31 @@ export default function CustomerLoginPage() {
       return redirect;
     }
     return userRole === 'customer' ? '/customer' : '/dashboard';
+  };
+
+  const handleFillEvaluator = () => {
+    setEmail('customer@resolveai.io');
+    setPassword('password123');
+    setError('');
+  };
+
+  const handleQuickEvaluatorLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const loggedUser = await login('customer@resolveai.io', 'password123', 'customer');
+      navigate(getSafeRedirect(loggedUser?.role));
+    } catch (err) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopyCredentials = () => {
+    navigator.clipboard.writeText('Email: customer@resolveai.io\nPassword: password123');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSubmit = async (e) => {
@@ -145,6 +171,92 @@ export default function CustomerLoginPage() {
             <span>{error}</span>
           </div>
         )}
+
+        {/* Hackathon Evaluator Credentials Card */}
+        <div
+          style={{
+            padding: '16px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            marginBottom: '20px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={15} color="#2563eb" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Hackathon Evaluator Credentials
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleFillEvaluator}
+              style={{
+                background: 'transparent',
+                border: '1px solid #2563eb',
+                color: '#2563eb',
+                borderRadius: '6px',
+                padding: '3px 8px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>⚡ Auto-Fill</span>
+            </button>
+          </div>
+
+          <div
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'var(--bg-primary)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.82rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              marginBottom: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Customer Email:</span>
+              <strong style={{ fontFamily: 'monospace' }}>customer@resolveai.io</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Password:</span>
+              <strong style={{ fontFamily: 'monospace' }}>password123</strong>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleQuickEvaluatorLogin}
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '8px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Sparkles size={14} />
+            <span>1-Click Evaluator Customer Sign In</span>
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>

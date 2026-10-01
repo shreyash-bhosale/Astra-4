@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Shield, ArrowRight, AlertCircle, Lock } from 'lucide-react';
+import { Shield, ArrowRight, AlertCircle, Lock, Sparkles } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function StaffLoginPage() {
@@ -20,6 +20,31 @@ export default function StaffLoginPage() {
       return redirect;
     }
     return '/dashboard';
+  };
+
+  const handleFillRole = (staffRole) => {
+    setError('');
+    if (staffRole === 'admin') {
+      setEmail('admin@resolveai.io');
+      setPassword('password123');
+    } else {
+      setEmail('manager@resolveai.io');
+      setPassword('password123');
+    }
+  };
+
+  const handleQuickStaffLogin = async (staffRole) => {
+    setError('');
+    setLoading(true);
+    const targetEmail = staffRole === 'admin' ? 'admin@resolveai.io' : 'manager@resolveai.io';
+    try {
+      const loggedUser = await login(targetEmail, 'password123', 'staff');
+      navigate(getSafeRedirect(loggedUser?.role));
+    } catch (err) {
+      setError(err.message || 'Staff login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -160,6 +185,134 @@ export default function StaffLoginPage() {
             </div>
           </div>
         )}
+
+        {/* Hackathon Evaluator Credentials Card */}
+        <div
+          style={{
+            padding: '16px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            marginBottom: '20px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sparkles size={15} color="#8b5cf6" />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Hackathon Evaluator Credentials
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => handleFillRole('admin')}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #8b5cf6',
+                  color: '#8b5cf6',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.73rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Fill Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFillRole('manager')}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.73rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Fill Manager
+              </button>
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: '10px 12px',
+              backgroundColor: 'var(--bg-primary)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.82rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              marginBottom: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Admin Email:</span>
+              <strong style={{ fontFamily: 'monospace' }}>admin@resolveai.io</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Manager Email:</span>
+              <strong style={{ fontFamily: 'monospace' }}>manager@resolveai.io</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Password:</span>
+              <strong style={{ fontFamily: 'monospace' }}>password123</strong>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => handleQuickStaffLogin('admin')}
+              disabled={loading}
+              style={{
+                padding: '8px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: '#000000',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
+              }}
+            >
+              <Shield size={13} />
+              <span>1-Click Admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickStaffLogin('manager')}
+              disabled={loading}
+              style={{
+                padding: '8px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: '#8b5cf6',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
+              }}
+            >
+              <Sparkles size={13} />
+              <span>1-Click Manager</span>
+            </button>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>

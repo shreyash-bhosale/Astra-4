@@ -1,10 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { User, Shield, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function LoginSelectionPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [loadingRole, setLoadingRole] = useState(null);
+
+  const handleOneClickLogin = async (role) => {
+    setLoadingRole(role);
+    try {
+      if (role === 'customer') {
+        const loggedUser = await login('customer@resolveai.io', 'password123', 'customer');
+        navigate(loggedUser?.role === 'customer' ? '/customer' : '/dashboard');
+      } else {
+        const loggedUser = await login('admin@resolveai.io', 'password123', 'staff');
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      // Fallback navigate to respective portal
+      if (role === 'customer') navigate('/customer/login');
+      else navigate('/staff/login');
+    } finally {
+      setLoadingRole(null);
+    }
+  };
 
   return (
     <div
@@ -32,7 +54,7 @@ export default function LoginSelectionPage() {
         }}
       >
         {/* Brand */}
-        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <Link to="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
             <div
               style={{
@@ -59,6 +81,112 @@ export default function LoginSelectionPage() {
           <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginTop: '8px' }}>
             Select your authentication portal to proceed
           </p>
+        </div>
+
+        {/* Hackathon Evaluator Quick Access Banner */}
+        <div
+          style={{
+            width: '100%',
+            padding: '16px 20px',
+            backgroundColor: 'var(--bg-primary)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: 'var(--shadow-card)',
+            marginBottom: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} color="#2563eb" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-primary)' }}>
+                Hackathon Evaluator Credentials
+              </span>
+            </div>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}>
+              Instant Login Ready
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+            {/* Customer Credential */}
+            <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
+              <div style={{ fontWeight: 700, color: '#2563eb', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <User size={13} />
+                <span>Customer User Credentials</span>
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                <strong>Email:</strong> customer@resolveai.io
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                <strong>Pass:</strong> password123
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOneClickLogin('customer')}
+                disabled={loadingRole !== null}
+                style={{
+                  marginTop: '10px',
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Sparkles size={12} />
+                <span>{loadingRole === 'customer' ? 'Signing in...' : '1-Click Customer Portal'}</span>
+              </button>
+            </div>
+
+            {/* Admin Credential */}
+            <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem' }}>
+              <div style={{ fontWeight: 700, color: '#8b5cf6', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Shield size={13} />
+                <span>Admin / Staff Credentials</span>
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                <strong>Email:</strong> admin@resolveai.io
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                <strong>Pass:</strong> password123
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOneClickLogin('admin')}
+                disabled={loadingRole !== null}
+                style={{
+                  marginTop: '10px',
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Shield size={12} />
+                <span>{loadingRole === 'admin' ? 'Signing in...' : '1-Click Admin Console'}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Portals Selection Grid */}

@@ -617,12 +617,12 @@ ResolveAI implements a **dual-store database engine**:
 
 ResolveAI provides pre-seeded **1-click evaluation personas** on the login screen:
 
-| Persona | Role | Email | Password | Access Permissions |
-| :--- | :--- | :--- | :--- | :--- |
-| **Sarah Connor** | `agent` | `sarah.connor@resolveai.io` | `password123` | Ticket Workspace, Trigger AI Runs, View Activity |
-| **James Rodriguez** | `manager` | `james.rodriguez@resolveai.io` | `password123` | Approvals Queue, Authorize/Reject Actions, Policies |
-| **Alex Vance** | `admin` | `admin@resolveai.io` | `password123` | AI Control Center, Email Testing, Autonomy Settings |
-| **Elena Rostova** | `customer` | `elena.rostova@example.com` | `password123` | Customer Portal, Raise Issues, Orders, AI Chat |
+| Persona | Role | Portal / Route | Email | Password | Access Permissions |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Customer User** | `customer` | `/customer/login` | `customer@resolveai.io` | `password123` | Customer Portal, Raise Issues, Orders, AI Chat |
+| **Alex Vance (Admin)** | `admin` | `/staff/login` | `admin@resolveai.io` | `password123` | AI Control Center, Email Testing, Autonomy Settings, Reset |
+| **James Rodriguez** | `manager` | `/staff/login` | `manager@resolveai.io` | `password123` | Approvals Queue, Authorize/Reject Actions, Policies |
+| **Sarah Connor** | `agent` | `/staff/login` | `agent@resolveai.io` | `password123` | Ticket Workspace, Trigger AI Runs, View Activity |
 
 ### RBAC Permission Matrix:
 
