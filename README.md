@@ -948,10 +948,22 @@ Follow this fast, foolproof 3-minute evaluation walkthrough:
 
 ## 👥 License & Team
 
-### Author
-* **Shreyash Bhosale** — *Full-Stack Architecture, Multi-Agent Engineering & Product Design*
-* GitHub: [@shreyash-bhosale](https://github.com/shreyash-bhosale)
-* Repository: [shreyash-bhosale/Astra-4](https://github.com/shreyash-bhosale/Astra-4)
+## 👥 Team — Astra-4
+
+**Team Name:** `Astra-4`
+
+| Role           | Team Member           | Email                          |
+| -------------- | --------------------- | ------------------------------ |
+| 👑 Team Leader | **Sparsh Shrivastav** | `sparshs2020@gmail.com`        |
+| 💻 Developer   | **Shreyash Bhosale**  | `shreyashbhosale592@gmail.com` |
+| 💻 Developer   | **Vatsal Pithwa**     | `vatsalusesai@gmail.com`       |
+| 💻 Developer   | **Uzair Pathan**      | `pathanuzair968@gmail.com`     |
+
+### 🏆 Team Mission
+
+**Astra-4** is building **ResolveAI**, an agentic customer operations platform designed to autonomously analyze customer issues, investigate relevant information, apply business policies, coordinate actions, communicate outcomes, and verify resolution — with human approval at critical decision points.
+
+> **From customer issue to verified resolution — autonomously.**
 
 ### License
 * No license has currently been specified. All rights reserved.
