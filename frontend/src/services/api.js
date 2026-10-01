@@ -8,7 +8,16 @@ class ApiClient {
   }
 
   getToken() {
-    return localStorage.getItem('resolveai_token');
+    const local = localStorage.getItem('resolveai_token');
+    if (local) return local;
+    try {
+      const supaAuth = localStorage.getItem('resolveai-supabase-auth');
+      if (supaAuth) {
+        const parsed = JSON.parse(supaAuth);
+        return parsed?.access_token || parsed?.currentSession?.access_token || null;
+      }
+    } catch (e) {}
+    return null;
   }
 
   setToken(token) {

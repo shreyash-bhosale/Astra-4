@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { db } from '../db/store.js';
+import { getSupabaseClient } from '../db/supabaseClient.js';
 
-export const requireAuth = (req, res, next) => {
+export const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,9 +15,33 @@ export const requireAuth = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
 
+  // 1. First, check if token is a Supabase Auth access_token
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { data: supaAuth, error: supaErr } = await supabase.auth.getUser(token);
+      if (!supaErr && supaAuth?.user) {
+        const supaUser = supaAuth.user;
+        let localUser = db.findOne('users', u => u.id === supaUser.id || u.email.toLowerCase() === supaUser.email?.toLowerCase());
+
+        req.user = {
+          id: supaUser.id,
+          name: supaUser.user_metadata?.name || localUser?.name || supaUser.email?.split('@')[0] || 'User',
+          email: supaUser.email,
+          role: supaUser.user_metadata?.role || localUser?.role || 'agent'
+        };
+
+        return next();
+      }
+    } catch (supaErr) {
+      // Continue to local JWT verify
+    }
+  }
+
+  // 2. Fallback to local JWT verification (for unit tests and local tokens)
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    const user = db.findById('users', decoded.id);
+    const user = db.findById('users', decoded.id) || db.findOne('users', u => u.email.toLowerCase() === decoded.email?.toLowerCase());
 
     if (!user) {
       return res.status(401).json({
@@ -32,7 +57,7 @@ export const requireAuth = (req, res, next) => {
       role: user.role
     };
 
-    next();
+    return next();
   } catch (err) {
     return res.status(401).json({
       error: 'Unauthorized',

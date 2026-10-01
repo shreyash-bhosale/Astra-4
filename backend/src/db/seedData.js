@@ -259,6 +259,21 @@ export const getInitialData = () => {
 
   const agent_runs = [
     {
+      id: 'run-seed-002',
+      ticket_id: 'tkt-002',
+      status: 'WAITING_APPROVAL',
+      objective: 'Verify replacement eligibility for mismatched keyboard switch model',
+      risk_level: 'medium',
+      plan: [
+        { step: 1, agent: 'triage_agent', action: 'classify_intent', status: 'COMPLETED' },
+        { step: 2, agent: 'investigation_agent', action: 'retrieve_order', status: 'COMPLETED' },
+        { step: 3, agent: 'policy_agent', action: 'evaluate_policy', status: 'COMPLETED' },
+        { step: 4, agent: 'action_agent', action: 'create_replacement_request', status: 'WAITING_APPROVAL', requiresApproval: true }
+      ],
+      started_at: '2026-10-01T08:14:10.000Z',
+      completed_at: null
+    },
+    {
       id: 'run-seed-003',
       ticket_id: 'tkt-003',
       status: 'COMPLETED',

@@ -1,0 +1,32 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const isSupabaseConfigured = () => {
+  return Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('your-project'));
+};
+
+let client = null;
+
+if (isSupabaseConfigured()) {
+  try {
+    client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'resolveai-supabase-auth'
+      }
+    });
+  } catch (err) {
+    console.error('[Supabase Auth] Client initialization failed:', err.message);
+  }
+}
+
+export const supabase = client;
+
+// Safe configuration diagnostic (never log secret values)
+if (typeof window !== 'undefined') {
+  console.log('[Supabase Auth] Status: initialized =', Boolean(client), '| URL configured =', Boolean(supabaseUrl), '| Anon key configured =', Boolean(supabaseAnonKey));
+}

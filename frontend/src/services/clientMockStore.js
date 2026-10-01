@@ -196,13 +196,25 @@ export function handleClientMock(endpoint, options = {}) {
 
   // Auth: /auth/login
   if (endpoint === '/auth/login' && method === 'POST') {
-    const user = store.users.find(u => u.email === body.email) || store.users[0];
-    return { token: 'mock-jwt-demo-token', user };
+    const cleanEmail = (body.email || '').trim().toLowerCase();
+    const user = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (user) {
+      if (user.password && body.password && user.password !== body.password) {
+        throw new Error('Invalid email or password');
+      }
+      return { token: 'mock-jwt-demo-token', user };
+    }
+    return { token: 'mock-jwt-demo-token', user: store.users[0] };
   }
 
   // Auth: /auth/register
   if (endpoint === '/auth/register' && method === 'POST') {
-    const newUser = { id: `usr-${Date.now()}`, name: body.name, email: body.email, role: body.role || 'agent' };
+    const cleanEmail = (body.email || '').trim().toLowerCase();
+    const existing = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      throw new Error('User already exists with this email');
+    }
+    const newUser = { id: `usr-${Date.now()}`, name: body.name, email: cleanEmail, role: body.role || 'agent', password: body.password };
     store.users.push(newUser);
     saveStorage(store);
     return { token: 'mock-jwt-demo-token', user: newUser };

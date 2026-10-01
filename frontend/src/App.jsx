@@ -32,8 +32,31 @@ function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div style={{ height: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-        Authenticating...
+      <div
+        style={{
+          height: '100svh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '16px',
+          backgroundColor: 'var(--bg-primary)',
+          color: 'var(--text-secondary)'
+        }}
+      >
+        <div
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: '2px solid var(--border-subtle)',
+            borderTopColor: 'var(--text-primary)',
+            animation: 'spin 0.8s linear infinite'
+          }}
+        />
+        <span style={{ fontSize: '0.9rem', fontWeight: 500, letterSpacing: '-0.01em' }}>
+          Checking authentication...
+        </span>
       </div>
     );
   }
