@@ -190,8 +190,8 @@ export class Repository {
 
     // Async write-through to Supabase
     if (this.supabase) {
-      Promise.resolve(this.supabase.from(tableName).insert(newRecord)).catch(err => {
-        console.warn(`[DATABASE] Supabase insert notice on ${tableName}:`, err.message);
+      Promise.resolve(this.supabase.from(tableName).upsert(newRecord)).catch(err => {
+        console.warn(`[DATABASE] Supabase upsert notice on ${tableName}:`, err.message);
       });
     }
 

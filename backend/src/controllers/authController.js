@@ -68,10 +68,11 @@ export const register = async (req, res, next) => {
     });
 
     // 3. Automatically link / initialize customer record in CRM table
-    let customer = db.findOne('customers', c => c.email.toLowerCase() === emailLower);
+    let customer = db.findOne('customers', c => c.user_id === newUser.id || c.email.toLowerCase() === emailLower);
     if (!customer) {
       customer = db.insert('customers', {
         id: `cust-${Date.now().toString(36)}`,
+        user_id: newUser.id,
         name: validated.name,
         email: emailLower,
         phone: validated.phone || null,
@@ -80,6 +81,8 @@ export const register = async (req, res, next) => {
         voice_updates_enabled: false,
         created_at: new Date().toISOString()
       });
+    } else if (!customer.user_id) {
+      db.update('customers', customer.id, { user_id: newUser.id });
     }
 
     const token = jwt.sign(
@@ -130,7 +133,7 @@ export const login = async (req, res, next) => {
               name: authData.user.user_metadata?.name || emailLower.split('@')[0],
               email: emailLower,
               password_hash,
-              role: authData.user.user_metadata?.role || 'agent'
+              role: authData.user.user_metadata?.role || 'customer'
             });
           }
 
@@ -141,8 +144,25 @@ export const login = async (req, res, next) => {
             });
           }
 
+          let customer = null;
+          if (user.role === 'customer') {
+            customer = db.findOne('customers', c => c.user_id === user.id || c.email.toLowerCase() === emailLower);
+            if (!customer) {
+              customer = db.insert('customers', {
+                id: `cust-${Date.now().toString(36)}`,
+                user_id: user.id,
+                name: user.name,
+                email: user.email,
+                tier: 'Standard',
+                company: 'Individual Consumer',
+                voice_updates_enabled: false,
+                created_at: new Date().toISOString()
+              });
+            }
+          }
+
           const token = authData.session?.access_token || jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, email: user.email, role: user.role, customerId: customer?.id },
             config.jwtSecret,
             { expiresIn: '7d' }
           );
@@ -152,7 +172,8 @@ export const login = async (req, res, next) => {
               id: user.id,
               name: user.name,
               email: user.email,
-              role: user.role
+              role: user.role,
+              customerId: customer?.id
             },
             token,
             session: authData.session
@@ -161,7 +182,7 @@ export const login = async (req, res, next) => {
 
         if (authError) {
           if (authError.message.includes('Email not confirmed')) {
-            return res.status(400).json({ error: 'Email confirmation required. Please verify your email before logging in.' });
+            console.warn('[AUTH] Supabase unconfirmed email notice, proceeding to local check:', authError.message);
           }
         }
       } catch (supaEx) {
@@ -188,8 +209,25 @@ export const login = async (req, res, next) => {
       });
     }
 
+    let customer = null;
+    if (user.role === 'customer') {
+      customer = db.findOne('customers', c => c.user_id === user.id || c.email.toLowerCase() === emailLower);
+      if (!customer) {
+        customer = db.insert('customers', {
+          id: `cust-${Date.now().toString(36)}`,
+          user_id: user.id,
+          name: user.name,
+          email: user.email,
+          tier: 'Standard',
+          company: 'Individual Consumer',
+          voice_updates_enabled: false,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, customerId: customer?.id },
       config.jwtSecret,
       { expiresIn: '7d' }
     );
@@ -199,7 +237,8 @@ export const login = async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        customerId: customer?.id
       },
       token
     });

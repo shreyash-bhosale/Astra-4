@@ -24,11 +24,17 @@ export const requireAuth = async (req, res, next) => {
         const supaUser = supaAuth.user;
         let localUser = db.findOne('users', u => u.id === supaUser.id || u.email.toLowerCase() === supaUser.email?.toLowerCase());
 
+        const customerRole = supaUser.user_metadata?.role || localUser?.role || 'customer';
+        const customer = customerRole === 'customer'
+          ? db.findOne('customers', c => c.user_id === supaUser.id || c.email.toLowerCase() === supaUser.email?.toLowerCase())
+          : null;
+
         req.user = {
           id: supaUser.id,
           name: supaUser.user_metadata?.name || localUser?.name || supaUser.email?.split('@')[0] || 'User',
           email: supaUser.email,
-          role: supaUser.user_metadata?.role || localUser?.role || 'customer'
+          role: customerRole,
+          ...(customer ? { customerId: customer.id } : {})
         };
 
         return next();
@@ -59,11 +65,16 @@ export const requireAuth = async (req, res, next) => {
       }
     }
 
+    const customer = user.role === 'customer'
+      ? db.findOne('customers', c => c.user_id === user.id || c.email.toLowerCase() === user.email?.toLowerCase())
+      : null;
+
     req.user = {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      ...(customer ? { customerId: customer.id } : (decoded.customerId ? { customerId: decoded.customerId } : {}))
     };
 
     return next();

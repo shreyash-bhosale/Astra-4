@@ -3,9 +3,10 @@
 
 const SEED_DATA = {
   users: [
-    { id: 'usr-agent-01', name: 'Sarah Connor', email: 'agent@resolveai.io', role: 'agent' },
-    { id: 'usr-manager-01', name: 'James Rodriguez', email: 'manager@resolveai.io', role: 'manager' },
-    { id: 'usr-admin-01', name: 'Alex Vance', email: 'admin@resolveai.io', role: 'admin' }
+    { id: 'usr-agent-01', name: 'Sarah Connor', email: 'agent@resolveai.io', role: 'agent', password: 'password123' },
+    { id: 'usr-manager-01', name: 'James Rodriguez', email: 'manager@resolveai.io', role: 'manager', password: 'password123' },
+    { id: 'usr-admin-01', name: 'Alex Vance', email: 'admin@resolveai.io', role: 'admin', password: 'password123' },
+    { id: 'usr-customer-01', name: 'Elena Rostova', email: 'customer@resolveai.io', role: 'customer', password: 'password123', customerId: 'cust-101' }
   ],
   customers: [
     { id: 'cust-101', name: 'Elena Rostova', email: 'elena.rostova@acmecorp.com', phone: '+1 (415) 555-0192', tier: 'VIP Enterprise', company: 'Acme Corp' },
@@ -261,6 +262,18 @@ function getStorage() {
         parsed.supervisor_events = JSON.parse(JSON.stringify(SEED_DATA.supervisor_events));
         needsSave = true;
       }
+      if (!parsed.users) {
+        parsed.users = JSON.parse(JSON.stringify(SEED_DATA.users));
+        needsSave = true;
+      } else {
+        // Ensure standard seed users exist
+        for (const su of SEED_DATA.users) {
+          if (!parsed.users.some(u => u.email.toLowerCase() === su.email.toLowerCase())) {
+            parsed.users.push(JSON.parse(JSON.stringify(su)));
+            needsSave = true;
+          }
+        }
+      }
       if (needsSave) saveStorage(parsed);
       return parsed;
     }
@@ -288,22 +301,28 @@ export function handleClientMock(endpoint, options = {}) {
     if (!user) {
       const cust = (store.customers || []).find(c => c.email.toLowerCase() === cleanEmail);
       if (cust) {
-        user = { id: `usr-${cust.id}`, name: cust.name, email: cust.email, role: 'customer' };
+        user = { id: `usr-${cust.id}`, name: cust.name, email: cust.email, role: 'customer', customerId: cust.id, password: 'password123' };
+        store.users.push(user);
+        saveStorage(store);
       }
     }
     if (user) {
       if (body.scope === 'staff' && user.role === 'customer') {
         throw new Error('Staff access required: This account does not have permission to access the ResolveAI Staff Console.');
       }
-      if (user.password && body.password && user.password !== body.password) {
+      const expectedPassword = user.password || 'password123';
+      if (body.password && expectedPassword !== body.password) {
         throw new Error('Invalid email or password');
       }
+      try {
+        localStorage.setItem('resolveai_current_user', JSON.stringify(user));
+      } catch (e) {}
       return { token: 'mock-jwt-demo-token', user };
     }
     if (body.scope === 'staff') {
       throw new Error('Invalid staff credentials. Authorized personnel only.');
     }
-    return { token: 'mock-jwt-demo-token', user: store.users[0] };
+    throw new Error('Invalid email or password');
   }
 
   // Auth: /auth/register
@@ -311,14 +330,23 @@ export function handleClientMock(endpoint, options = {}) {
     const cleanEmail = (body.email || '').trim().toLowerCase();
     const existing = store.users.find(u => u.email.toLowerCase() === cleanEmail);
     if (existing) {
-      throw new Error('User already exists with this email');
+      throw new Error('An account with this email already exists.');
     }
+    const newCustId = `cust-${Date.now().toString(36)}`;
     // Public registration STRICTLY forces role = 'customer'
-    const newUser = { id: `usr-${Date.now()}`, name: body.name, email: cleanEmail, role: 'customer', password: body.password };
+    const newUser = {
+      id: `usr-${Date.now()}`,
+      name: body.name,
+      email: cleanEmail,
+      phone: body.phone || '',
+      role: 'customer',
+      password: body.password,
+      customerId: newCustId
+    };
     store.users.push(newUser);
     store.customers = store.customers || [];
     store.customers.push({
-      id: `cust-${Date.now().toString(36)}`,
+      id: newCustId,
       name: body.name,
       email: cleanEmail,
       phone: body.phone || '',
@@ -326,11 +354,24 @@ export function handleClientMock(endpoint, options = {}) {
       company: 'Individual Consumer'
     });
     saveStorage(store);
+    try {
+      localStorage.setItem('resolveai_current_user', JSON.stringify(newUser));
+    } catch (e) {}
     return { token: 'mock-jwt-demo-token', user: newUser };
   }
 
   // Auth: /auth/me
   if (endpoint === '/auth/me') {
+    try {
+      const saved = localStorage.getItem('resolveai_current_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.email) {
+          const matched = store.users.find(u => u.email.toLowerCase() === parsed.email.toLowerCase());
+          return { user: matched || parsed };
+        }
+      }
+    } catch (e) {}
     return { user: store.users[0] };
   }
 

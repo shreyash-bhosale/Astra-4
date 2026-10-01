@@ -30,7 +30,7 @@ const mapAuthError = (err) => {
 const formatUserFromSupabase = (supaUser) => {
   if (!supaUser) return null;
   const role = supaUser.user_metadata?.role ||
-    (supaUser.email?.includes('customer') ? 'customer' : supaUser.email?.includes('admin') ? 'admin' : supaUser.email?.includes('manager') ? 'manager' : 'agent');
+    (supaUser.email?.includes('customer') ? 'customer' : supaUser.email?.includes('admin') ? 'admin' : supaUser.email?.includes('manager') ? 'manager' : 'customer');
   const name = supaUser.user_metadata?.name ||
     supaUser.email?.split('@')[0] || 'User';
 
@@ -38,7 +38,9 @@ const formatUserFromSupabase = (supaUser) => {
     id: supaUser.id,
     email: supaUser.email,
     name,
-    role
+    role,
+    phone: supaUser.user_metadata?.phone || null,
+    ...(supaUser.user_metadata?.customerId ? { customerId: supaUser.user_metadata.customerId } : {})
   };
 };
 
@@ -58,6 +60,13 @@ export const AuthProvider = ({ children }) => {
             console.warn('[Supabase Auth] Session fetch error:', error.message);
           } else if (session?.user && mounted) {
             const formatted = formatUserFromSupabase(session.user);
+            try {
+              const saved = localStorage.getItem('resolveai_current_user');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed?.customerId) formatted.customerId = parsed.customerId;
+              }
+            } catch (e) {}
             setUser(formatted);
             api.setToken(session.access_token);
             setLoading(false);
@@ -75,8 +84,22 @@ export const AuthProvider = ({ children }) => {
           const res = await api.getMe();
           if (mounted && res?.user) {
             setUser(res.user);
+            try {
+              localStorage.setItem('resolveai_current_user', JSON.stringify(res.user));
+            } catch (e) {}
+            setLoading(false);
+            return;
           }
         } catch (err) {
+          try {
+            const saved = localStorage.getItem('resolveai_current_user');
+            if (saved && mounted) {
+              const parsed = JSON.parse(saved);
+              setUser(parsed);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {}
           if (mounted) {
             api.setToken(null);
             setUser(null);
@@ -122,7 +145,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password, scope = 'any') => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Real Supabase Authentication
+    // 1. Attempt Real Supabase Authentication
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -130,11 +153,7 @@ export const AuthProvider = ({ children }) => {
           password
         });
 
-        if (error) {
-          throw new Error(mapAuthError(error));
-        }
-
-        if (data?.session && data?.user) {
+        if (!error && data?.session && data?.user) {
           const formatted = formatUserFromSupabase(data.user);
 
           // Prevent role confusion: If attempting to login via /staff/login with customer account
@@ -147,24 +166,35 @@ export const AuthProvider = ({ children }) => {
 
           api.setToken(data.session.access_token);
           setUser(formatted);
+          try {
+            localStorage.setItem('resolveai_current_user', JSON.stringify(formatted));
+          } catch (e) {}
           return formatted;
         }
+
+        if (error) {
+          console.warn('[Supabase Auth] signInWithPassword notice (falling back to API):', error.message);
+        }
       } catch (err) {
-        // If Supabase rejected credentials or email not confirmed or staff access denied, throw mapped error
-        if (err.message && !err.message.includes('fetch')) {
+        if (err.message?.includes('Staff access required')) {
           throw err;
         }
-        // If Supabase was unreachable, attempt backend API login below
         console.warn('[Supabase Auth] Login fallback to API:', err.message);
       }
     }
 
-    // 2. Backend API fallback
+    // 2. Backend API / Database verification
     try {
       const res = await api.login({ email: cleanEmail, password, scope });
-      api.setToken(res.token);
-      setUser(res.user);
-      return res.user;
+      if (res?.token && res?.user) {
+        api.setToken(res.token);
+        setUser(res.user);
+        try {
+          localStorage.setItem('resolveai_current_user', JSON.stringify(res.user));
+        } catch (e) {}
+        return res.user;
+      }
+      throw new Error('Invalid email or password');
     } catch (apiErr) {
       throw new Error(mapAuthError(apiErr));
     }
@@ -183,8 +213,9 @@ export const AuthProvider = ({ children }) => {
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Call backend registration endpoint to create user, profile, and auto-confirm in Supabase
+    let regRes = null;
     try {
-      await api.register({
+      regRes = await api.register({
         name: name.trim(),
         email: cleanEmail,
         phone: phone.trim(),
@@ -195,23 +226,47 @@ export const AuthProvider = ({ children }) => {
       throw new Error(mapAuthError(regErr));
     }
 
-    // 2. Immediately sign in with Supabase Auth to establish persistent session
-    if (isSupabaseConfigured() && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password
-      });
+    // 2. Immediately cache session from registration response
+    if (regRes?.token && regRes?.user) {
+      api.setToken(regRes.token);
+      setUser(regRes.user);
+      try {
+        localStorage.setItem('resolveai_current_user', JSON.stringify(regRes.user));
+      } catch (e) {}
+    }
 
-      if (!error && data?.session && data?.user) {
-        const formatted = formatUserFromSupabase(data.user);
-        api.setToken(data.session.access_token);
-        setUser(formatted);
-        return formatted;
+    // 3. Establish Supabase Auth browser session if possible
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password
+        });
+
+        if (!error && data?.session && data?.user) {
+          const formatted = formatUserFromSupabase(data.user);
+          if (regRes?.user?.customerId) {
+            formatted.customerId = regRes.user.customerId;
+          }
+          api.setToken(data.session.access_token);
+          setUser(formatted);
+          try {
+            localStorage.setItem('resolveai_current_user', JSON.stringify(formatted));
+          } catch (e) {}
+          return formatted;
+        }
+      } catch (supaErr) {
+        console.warn('[Supabase Auth] Post-registration signIn notice:', supaErr.message);
       }
     }
 
-    // 3. Fallback: log in via API
-    return await login(cleanEmail, password);
+    // 4. Return established registration user
+    if (regRes?.user) {
+      return regRes.user;
+    }
+
+    // 5. Fallback: log in via API
+    return await login(cleanEmail, password, 'customer');
   };
 
   const forgotPassword = async (email) => {
@@ -232,6 +287,9 @@ export const AuthProvider = ({ children }) => {
     } finally {
       api.setToken(null);
       setUser(null);
+      try {
+        localStorage.removeItem('resolveai_current_user');
+      } catch (e) {}
       if (redirectPath) {
         window.location.href = redirectPath;
       }
