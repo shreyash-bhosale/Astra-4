@@ -511,12 +511,11 @@ All production screenshots below are available in high resolution under [`docs/s
 *Designed according to the strict **Premium Futuristic Liquid-Metal** design system, featuring a responsive Three.js metallic fluid shader canvas, neo-grotesk typography, and full dark/light theme support.*
 
 <p align="center">
-  <img src="./docs/screenshots/landing_page_hero.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero" width="95%" />
+  <img src="docs/screenshots/landing_page_hero.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero" width="95%" />
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/landing_page_dark.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Dark Mode" width="49%" />
-  <img src="./docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Light Mode" width="49%" />
+  <img src="docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Full View" width="95%" />
 </p>
 
 ---
