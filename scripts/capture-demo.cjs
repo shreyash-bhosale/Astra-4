@@ -32,8 +32,8 @@ async function capture() {
 
   async function recordFrame() {
     // Capture for animated demo at 960x600 for optimal GIF performance
-    const buf = await page.screenshot({ encoding: 'binary' });
-    frames.push(buf);
+    const buf = await page.screenshot();
+    frames.push(Buffer.from(buf));
   }
 
   try {
@@ -145,7 +145,7 @@ async function capture() {
       const gifPath = path.join(SCREENSHOT_DIR, 'resolveai-demo-walkthrough.gif');
       
       // Parse first frame to get dimensions
-      const firstPng = PNG.sync.read(frames[0]);
+      const firstPng = PNG.sync.read(Buffer.from(frames[0]));
       const width = firstPng.width;
       const height = firstPng.height;
 
@@ -164,7 +164,7 @@ async function capture() {
       encoder.setQuality(15);
 
       for (let i = 0; i < frames.length; i++) {
-        const png = PNG.sync.read(frames[i]);
+        const png = PNG.sync.read(Buffer.from(frames[i]));
         // Bilinear downsample to targetW x targetH
         const scaledBuf = Buffer.alloc(targetW * targetH * 4);
         for (let y = 0; y < targetH; y++) {
