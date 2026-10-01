@@ -249,26 +249,26 @@ export default function DashboardPage() {
                   style={{
                     padding: '16px',
                     borderRadius: 'var(--radius-md)',
-                    border: '1px solid #fed7aa',
-                    backgroundColor: '#fffbeb'
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    backgroundColor: 'var(--status-appr-bg)'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#9a3412' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--accent-amber)' }}>
                       {appr.action}
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600 }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--status-appr-text)', fontWeight: 600 }}>
                       Ticket #{appr.ticket_id.slice(0, 8)}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#78350f', lineHeight: 1.4, marginBottom: '12px' }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '12px' }}>
                     {appr.reason}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                     <button
                       onClick={() => navigate('/approvals')}
                       className="btn-sm-primary"
-                      style={{ height: '32px', fontSize: '0.78rem', backgroundColor: '#000000' }}
+                      style={{ height: '34px', fontSize: '0.8rem', paddingInline: '16px', fontWeight: 700 }}
                     >
                       Review Approval
                     </button>

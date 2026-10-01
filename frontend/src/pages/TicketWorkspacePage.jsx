@@ -316,7 +316,7 @@ export default function TicketWorkspacePage() {
                   onClick={() => handleApprove(pendingApproval.id)}
                   disabled={approving}
                   className="btn-primary"
-                  style={{ flex: 1, height: '44px', backgroundColor: '#000000', fontSize: '0.92rem' }}
+                  style={{ flex: 1, height: '44px', fontSize: '0.92rem' }}
                 >
                   <Check size={16} />
                   <span>{approving ? 'Executing...' : 'Authorize Action & Resume'}</span>
@@ -495,7 +495,7 @@ export default function TicketWorkspacePage() {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: '#000000'
+                        backgroundColor: 'var(--text-primary)'
                       }}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
