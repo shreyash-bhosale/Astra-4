@@ -2,7 +2,7 @@
 
 # ⚡ RESOLVE.AI
 
-### Autonomous Agentic Customer-Operations Platform
+### Autonomous Agentic Customer Operations Platform
 **From customer issue to verified resolution — autonomously.**
 
 <p align="center">
@@ -17,7 +17,10 @@
     <img src="https://img.shields.io/badge/SOURCE%20CODE-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Repository" />
   </a>
   <a href="./docs/screenshots/resolveai-demo-walkthrough.gif">
-    <img src="https://img.shields.io/badge/DEMO%20VIDEO-ANIMATED%20WALKTHROUGH-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video" />
+    <img src="https://img.shields.io/badge/DEMO%20WALKTHROUGH-INTERACTIVE%20GIF-FF0000?style=for-the-badge&logo=playstation&logoColor=white" alt="Interactive Walkthrough" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/LICENSE-MIT-green?style=for-the-badge" alt="License" />
   </a>
 </p>
 
@@ -26,15 +29,15 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=nodedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" />
-  <img src="https://img.shields.io/badge/Three.js-Liquid%20Metal%203D-000000?style=flat-square&logo=threedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Google%20Gemini-Flash%203.5-4285F4?style=flat-square&logo=google&logoColor=white" />
-  <img src="https://img.shields.io/badge/Resend-Transactional%20Email-000000?style=flat-square&logo=resend&logoColor=white" />
-  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=white" />
-  <img src="https://img.shields.io/badge/Zod-Schema%20Validation-3E67B1?style=flat-square&logo=zod&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tests-59%2F59%20Passing-10B981?style=flat-square" />
+  <img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-8.3-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Three.js-Liquid%20Metal%203D-000000?style=flat-square&logo=threedotjs&logoColor=white" alt="Three.js" />
+  <img src="https://img.shields.io/badge/Google%20Gemini-Flash%203.5-4285F4?style=flat-square&logo=google&logoColor=white" alt="Google Gemini" />
+  <img src="https://img.shields.io/badge/Resend-Transactional%20Email-000000?style=flat-square&logo=resend&logoColor=white" alt="Resend" />
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase" />
+  <img src="https://img.shields.io/badge/Zod-Schema%20Validation-3E67B1?style=flat-square&logo=zod&logoColor=white" alt="Zod" />
+  <img src="https://img.shields.io/badge/Verified%20Tests-59%20Passed%20%7C%200%20Failed-10B981?style=flat-square" alt="Tests" />
 </p>
 
 </div>
@@ -45,283 +48,254 @@
 
 1. [What is ResolveAI?](#-what-is-resolveai)
 2. [Problem Statement & Enterprise Value](#-problem-statement--enterprise-value)
-3. [The Solution: Autonomous Multi-Agent Operations](#-the-solution-autonomous-multi-agent-operations)
-4. [Live Demo & Video Walkthrough](#-live-demo--video-walkthrough)
-5. [User Interface & Screenshots Gallery](#-user-interface--screenshots-gallery)
-6. [Key Features](#-key-features)
-7. [The 8-Agent Supervisory Topology](#-the-8-agent-supervisory-topology)
-8. [Autonomous AI Mode & Governance Control Plane](#-autonomous-ai-mode--governance-control-plane)
-9. [Automated Transactional Email System (Resend)](#-automated-transactional-email-system-resend)
-10. [Customer Care Portal](#-customer-care-portal)
-11. [End-to-End Workflow & State Machine](#-end-to-end-workflow--state-machine)
-12. [Human-in-the-Loop (HITL) Safety Gate](#-human-in-the-loop-hitl-safety-gate)
-13. [AI Security & Defense-in-Depth](#-ai-security--defense-in-depth)
-14. [Example User Journey](#-example-user-journey)
-15. [Technology Stack](#-technology-stack)
-16. [Repository & Project Structure](#-repository--project-structure)
-17. [REST API Documentation](#-rest-api-documentation)
-18. [Database Architecture & Schema](#-database-architecture--schema)
-19. [Authentication & Role-Based Access (RBAC)](#-authentication--role-based-access-rbac)
-20. [Environment Variables](#-environment-variables)
-21. [Local Quickstart & Installation](#-local-quickstart--installation)
-22. [Automated Testing & Audit Verification](#-automated-testing--audit-verification)
-23. [Production Deployment Guide](#-production-deployment-guide)
-24. [Hackathon Judge 3-Minute Demo Script](#-hackathon-judge-3-minute-demo-script)
-25. [License & Team](#-license--team)
+3. [The Solution: Multi-Agent Operations](#-the-solution-multi-agent-operations)
+4. [Why ResolveAI is Actually Agentic](#-why-resolveai-is-actually-agentic)
+5. [The 8-Agent Supervisory Topology](#-the-8-agent-supervisory-topology)
+6. [AI Governance & Safety Controls](#-ai-governance--safety-controls)
+7. [AI Security & Defense-in-Depth](#-ai-security--defense-in-depth)
+8. [Automated Transactional Email System (Resend)](#-automated-transactional-email-system-resend)
+9. [Customer Care Portal](#-customer-care-portal)
+10. [End-to-End Workflow & Diagrams](#-end-to-end-workflow--diagrams)
+11. [User Interface & Screenshots Gallery](#-user-interface--screenshots-gallery)
+12. [Technology Stack](#-technology-stack)
+13. [Repository & Project Structure](#-repository--project-structure)
+14. [REST API Documentation](#-rest-api-documentation)
+15. [Database Architecture & Dual-Store Engine](#-database-architecture--dual-store-engine)
+16. [Authentication & Role-Based Access (RBAC)](#-authentication--role-based-access-rbac)
+17. [Environment Variables](#-environment-variables)
+18. [Local Quickstart & Installation](#-local-quickstart--installation)
+19. [Automated Testing & Audit Evidence](#-automated-testing--audit-evidence)
+20. [Production Deployment Guide](#-production-deployment-guide)
+21. [Hackathon Judge 3-Minute Demo Script](#-hackathon-judge-3-minute-demo-script)
+22. [Team & License](#-team--license)
 
 ---
 
 ## 💡 What is ResolveAI?
 
-**ResolveAI** is an enterprise-grade **agentic customer-operations platform** that autonomously investigates customer support tickets, plans multi-step resolution paths, queries internal enterprise databases, reasons against company warranty and return policies, coordinates specialized AI agents, and enforces strict **policy-governed authorization gates** before executing real operations.
+**ResolveAI** is an **autonomous agentic customer operations platform** that investigates customer support tickets, plans multi-step resolution workflows, queries internal databases, reasons over active company warranty and return policies, coordinates specialized AI agents, and enforces strict **policy-governed authorization gates** before executing operational actions.
 
-Unlike conversational chatbots that merely generate polite text without operational capabilities, ResolveAI operates as a **secure, auditable, autonomous operations engine**:
-* **Investigates** CRM customer records, purchase histories, and real-time carrier tracking timestamps.
+Unlike conversational chatbots that merely generate conversational text, ResolveAI operates as an **auditable operations engine**:
+* **Investigates** CRM customer records, purchase histories, and carrier tracking timestamps.
 * **Evaluates** company legal policies, return rules, and warranty coverage windows deterministically.
-* **Provisions** real warehouse replacement dispatches and ERP status updates through gated tools.
-* **Automates** transactional customer emails and managerial alerts via **Resend** with smart sandbox fallbacks.
-* **Audits** every resolution with an independent 5-point verification gate before any ticket can be marked resolved.
+* **Provisions** replacement requests and internal status updates through gated tools.
+* **Automates** transactional customer notifications and managerial alerts via **Resend** with smart sandbox fallbacks.
+* **Audits** every resolution with an independent 5-point verification gate before any ticket can be closed.
 * **Governs** operations via the **ResolveAI Supervisor Agent** with configurable autonomous financial thresholds ($250 to unlimited) and immediate emergency stop controls.
-* **Logs** an immutable, timestamped audit trail of every agent thought, tool execution, and supervisor signature.
+* **Logs** an append-oriented audit trail recording every agent thought, tool execution, and supervisor decision.
 
 ---
 
 ## 🎯 Problem Statement & Enterprise Value
 
 ### The Real-World Pain
-Modern customer operations teams at e-commerce, hardware, and SaaS companies suffer from severe friction:
-1. **Fragmented Data Silos:** Support representatives waste 70% of case handling time toggling between ticket queues (Zendesk), CRM customer profiles (Salesforce), order management systems (Shopify/ERP), carrier tracking portals (FedEx/UPS), and internal policy wikis.
+Customer operations teams at e-commerce, hardware, and digital commerce companies face persistent operational friction:
+1. **Fragmented Data Silos:** Support representatives spend case handling time toggling between ticket queues, CRM profiles, order management records, carrier tracking portals, and internal policy documents.
 2. **Repetitive Calculation Fatigue:** Agents manually compute whether a damaged item arrived within a 14-day warranty policy window or verify whether an order is eligible for pre-dispatch cancellation.
 3. **The "Black-Box" Bot Risk:** Conventional LLM chatbots frequently hallucinate false promises to customers (e.g., promising full refunds outside policy) or lack the programmatic safety controls required to execute internal tools without runaway financial or inventory risk.
-4. **Zero Auditability:** Standard support software fails to capture a transparent chain of reasoning showing *why* a replacement was approved, *which* policy clause applied, and *who* verified the evidence.
+4. **Lack of Auditability:** Standard support software fails to capture a transparent chain of reasoning showing *why* a replacement was approved, *which* policy clause applied, and *who* verified the evidence.
 
 ### The ResolveAI Value
-* **Autonomous Resolution in Seconds:** Resolves routine warranty claims, defective product replacements, wrong shipments, and pre-dispatch cancellations in under 5 seconds rather than 24–48 hours.
-* **Deterministic Policy Enforcement:** Eliminates human error and policy violations by programmatically evaluating policy clauses against verifiable timestamps and database records.
-* **Guaranteed Financial & Operational Safety:** Sensitive operations (replacements, large refunds) are physically halted at a supervisor approval gate until authorized, or handled autonomously only within administrator-configured monetary limits.
-* **Automated Customer Communication:** Dispatches professional, fact-checked transactional emails automatically on every ticket state transition without requiring manual drafting.
-* **Complete Explainability:** An immutable 18-point audit log records every single agent thought, tool call parameter, policy citation, and human/supervisor decision.
+* **Autonomous Resolution:** Resolves routine warranty claims, defective product replacements, wrong shipments, and pre-dispatch cancellations in seconds rather than hours.
+* **Deterministic Policy Enforcement:** Eliminates calculation errors by programmatically evaluating policy clauses against verifiable timestamps and database records.
+* **Guarded Financial Boundaries:** Sensitive operations (replacements, large refunds) are held at an authorization gate until reviewed by a human supervisor or autonomously handled within strict financial limits.
+* **Automated Customer Communication:** Dispatches professional, fact-checked transactional emails automatically on key lifecycle events without requiring manual drafting.
+* **Explainable Reasoning:** An append-oriented audit log records every agent thought, tool call parameter, policy citation, and human/supervisor decision.
 
 ---
 
-## 🛠️ The Solution: Autonomous Multi-Agent Operations
+## 🛠️ The Solution: Multi-Agent Operations
 
-ResolveAI organizes intelligence into a **two-tier supervisory multi-agent architecture**: an **8th Supervisory Intelligence Layer** that oversees, governs, and coordinates a **7-Agent Autonomous Execution Fleet**:
+ResolveAI organizes operations into an **8-Agent Supervisory Topology** combining a supervisory governance layer with seven specialized execution agents:
 
-```text
-                             ┌───────────────────────────────────────┐
-                             │       RESOLVEAI SUPERVISOR AGENT       │
-                             │       (AI Control Center Layer)       │
-                             │  • Autonomous Approval Evaluation     │
-                             │  • Financial Threshold Enforcement    │
-                             │  • Pause & Emergency Stop Control     │
-                             │  • Operational Intelligence Telemetry │
-                             └──────────────────┬────────────────────┘
-                                                │ Supervises & Governs
-                                                ▼
-                             ┌───────────────────────────────────────┐
-                             │         ORCHESTRATOR AGENT            │
-                             │  • Formulates 6-Step Dynamic DAG Plan │
-                             │  • Enforces Step Dependencies         │
-                             └───────┬──────────────────────┬────────┘
-                                     │                      │
-                   ┌─────────────────┴─────┐          ┌─────┴─────────────────┐
-                   ▼                       ▼          ▼                       ▼
-            [ △ TRIAGE AGENT ]     [ ⌕ INVESTIGATION ] [ ▣ POLICY AGENT ]   [ ⚡ ACTION AGENT ]
-            Classifies Intent,     Queries CRM, Orders Evaluates Active     Executes Gated Tools
-            Urgency & Entities     & Delivery Age      Company Rules        (Warehouse Dispatch)
-                   │                       │                  │                       │
-                   └───────────────────────┼──────────────────┘                       │
-                                           ▼                                          │
-                               ┌───────────────────────┐                              │
-                               │  APPROVAL EVALUATION  │                              │
-                               │  • Autonomous AI Gate ├──────────────────────────────┘
-                               │  • Human Manager Gate │
-                               └───────────┬───────────┘
-                                           │
-                        ┌──────────────────┴──────────────────┐
-                        ▼                                     ▼
-            [ ✦ COMMUNICATION AGENT ]               [ ✓ VERIFICATION AGENT ]
-            Composes Factual Customer Updates       Independent 5-Point Audit
-            & Triggers Transactional Emails         Checklist Before Closure
-                        │                                     │
-                        └──────────────────┬──────────────────┘
-                                           ▼
-                             [ ✅ CASE VERIFIED & RESOLVED ]
-                             + Immutable Audit Trail & Metrics
+```mermaid
+flowchart TD
+    subgraph Client["Entry Points"]
+        Cust["Customer Submission (Portal / API)"]
+        Staff["Staff Console (Agent / Manager)"]
+    end
+
+    subgraph Governance["Governance & Control Plane"]
+        Sup["◈ Supervisor Agent<br/>(AI Control Center)"]
+        Ctrl["Execution Control Plane<br/>• Full / Semi-Autonomous Mode<br/>• Financial Thresholds ($250 - Unlimited)<br/>• Pause & Emergency Stop"]
+        Sup --- Ctrl
+    end
+
+    subgraph Orchestration["Orchestration Engine"]
+        Orch["◉ Orchestrator Agent<br/>(Dynamic 6-Step DAG Planner)"]
+    end
+
+    subgraph SpecialistAgents["Specialized Execution Fleet"]
+        Tri["△ Triage Agent<br/>(Intent, Category, Priority)"]
+        Inv["⌕ Investigation Agent<br/>(CRM, Orders, Tracking Age)"]
+        Pol["▣ Policy Agent<br/>(Rules Engine & Warranty Evaluation)"]
+        Act["⚡ Action Agent<br/>(Allowlisted Tool Execution)"]
+        Com["✦ Communication Agent<br/>(Factual Grounding & Email Composing)"]
+        Ver["✓ Verification Agent<br/>(Independent 5-Point Resolution Audit)"]
+    end
+
+    subgraph DataAndTools["Tools & Data Layer"]
+        Tools["Allowlisted Tools<br/>• getCustomer()<br/>• getOrder()<br/>• searchPolicies()<br/>• createReplacementRequest()"]
+        DB[(Supabase PostgreSQL /<br/>Local Store)]
+        Email["Resend Email Service<br/>(Transactional Dispatch)"]
+    end
+
+    Cust --> Orch
+    Staff --> Orch
+    Sup -.->|Supervises & Enforces| Orch
+
+    Orch --> Tri
+    Tri --> Inv
+    Inv --> Pol
+    Pol -->|Approval Decision Gate| Sup
+    
+    Sup -->|Autonomous or Human Approval| Act
+    Act --> Tools
+    Tools --> DB
+    Act --> Com
+    Com --> Email
+    Com --> Ver
+    Ver -->|5-Point Verification Pass| DB
+    DB --> Audit["Append-Oriented Audit Trail"]
 ```
 
 ---
 
-## 🎥 Live Demo & Video Walkthrough
+## 🧩 Why ResolveAI is Actually Agentic
 
-| Resource | Link | Description |
-| :--- | :--- | :--- |
-| **Demo Walkthrough Video** | [`[▶️ Watch Animated Video Walkthrough]`](./docs/screenshots/resolveai-demo-walkthrough.gif) | Animated resolution walkthrough: multi-agent DAG execution, approval gating, and autonomous resolution. |
-| **Live Web App** | [`https://astra4-delta.vercel.app/`](https://astra4-delta.vercel.app/) | Production web application with Dark/Light mode, interactive 3D hero, and full staff + customer portal. |
-| **GitHub Repository** | [`https://github.com/shreyash-bhosale/Astra-4`](https://github.com/shreyash-bhosale/Astra-4) | Complete full-stack codebase with frontend, backend, test suites, and schema. |
+ResolveAI is **not** a standard wrapper around an LLM chat endpoint. In simple LLM chatbots, the architecture is linear:
 
----
+```text
+Traditional Chatbot:
+User ───> LLM Prompt ───> Text Response (No tools, no validation, high hallucination risk)
+```
 
-## 🖼️ User Interface & Screenshots Gallery
+In ResolveAI, the system operates as a **coordinated multi-agent pipeline**:
 
-ResolveAI features a **futuristic liquid-metal aesthetic**, contemporary grotesk typography, high-contrast dark mode (default) and light mode, and responsive 12-column layouts.
+```text
+ResolveAI Agentic Workflow:
+Customer Issue
+      ↓
+[Orchestrator Agent] ─── Formulates dynamic DAG plan with step dependencies
+      ↓
+[Triage Agent] ──────── Semantic classification, entity extraction & priority scoring
+      ↓
+[Investigation Agent] ─ Queries CRM, order records & computes carrier delivery age
+      ↓
+[Policy Agent] ──────── Evaluates active company policies against gathered evidence
+      ↓
+[Supervisor Gate] ───── Evaluates risk; enforces autonomy thresholds & human approval
+      ↓
+[Action Agent] ──────── Invokes allowlisted internal tools in a simulated execution sandbox
+      ↓
+[Communication Agent] ─ Composes fact-checked emails strictly grounded in verified facts
+      ↓
+[Verification Agent] ── Independent auditor executing a 5-point verification checklist
+      ↓
+[Resolved State] ────── Ticket closed, customer notified via Resend, audit trail appended
+```
 
-### 1. Futuristic Liquid-Metal Landing Page Hero (Dark & Light Mode)
-<p align="center">
-  <img src="./docs/screenshots/landing_page_dark.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Dark Mode" width="49%" />
-  <img src="./docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Light Mode" width="49%" />
-</p>
-
-### 2. Multi-Agent Fleet Showcase & Polished Status Monitor
-<p align="center">
-  <img src="./docs/screenshots/agent_fleet_showcase.png" alt="8-Agent Autonomous Fleet Showcase" width="95%" />
-</p>
-
-### 3. Operations Dashboard & Real-Time Fleet Health
-<p align="center">
-  <img src="./docs/screenshots/dashboard_overview.png" alt="ResolveAI Operations Dashboard" width="95%" />
-</p>
-
-### 4. Interactive 6-Step DAG Execution Workspace & Human-in-the-Loop Gate
-<p align="center">
-  <img src="./docs/screenshots/ticket_workspace_paused_gate.png" alt="Ticket Workspace Paused at Human Approval Gate" width="49%" />
-  <img src="./docs/screenshots/human_approval_gate.png" alt="Human-in-the-Loop Supervisor Approval Queue" width="49%" />
-</p>
-
-### 5. Verified Case Resolution with Immutable Audit Trail
-<p align="center">
-  <img src="./docs/screenshots/ticket_workspace_resolved.png" alt="Verified Resolution State with 5-Point Audit Checklist" width="95%" />
-</p>
-
-### 6. Rapid Evaluation Login Screen with 1-Click Demo Personas
-<p align="center">
-  <img src="./docs/screenshots/login_page.png" alt="ResolveAI Authentication & 1-Click Personas" width="60%" />
-</p>
+### Why this qualifies as Agentic AI:
+1. **Dynamic Decomposition:** The Orchestrator generates a tailored Directed Acyclic Graph (DAG) for each case.
+2. **Specialized Roles:** Different agents have bounded responsibilities, distinct prompts, and isolated tool access.
+3. **Environment Interaction:** Agents read from databases and execute state-changing tools (e.g., dispatching replacement orders).
+4. **Policy-Bounded Reasoning:** Decisions are grounded in structured company rules rather than unconstrained LLM completion.
+5. **Self-Auditing:** The Verification Agent acts as an independent reviewer with authority to reject incomplete resolutions.
 
 ---
 
-## 🌟 Key Features
+## 🤖 The 8-Agent Supervisory Topology
 
-### 1. 3D Liquid-Metal Hero Experience
-* Developed in pure **Three.js** using `MeshPhysicalMaterial` (`roughness: 0.08`, `metalness: 0.98`, `clearcoat: 1.0`).
-* Procedurally generates organic liquid chrome ribbon sculptures and mercury droplets.
-* Studio lighting dynamically recalibrates when toggling between Dark Mode (obsidian specular highlights) and Light Mode (bright studio chrome).
-* Features pointer-driven micro-parallax and respects `@media (prefers-reduced-motion: reduce)`.
-
-### 2. Autonomous Multi-Agent Resolution Engine
-* Coordinates 8 specialized agents via a dynamic Directed Acyclic Graph (DAG) state machine.
-* Connects to **Google Gemini Flash** (`gemini-flash-latest` / `gemini-3.5-flash`) with structured JSON schema outputs.
-* **Deterministic Fallback Engine:** Features built-in heuristic reasoning fallbacks that guarantee instantaneous zero-downtime execution even during Google AI Studio rate limits (429) or temporary outages.
-
-### 3. AI Control Center & Autonomous AI Mode
-* Configurable **Autonomy Modes**: `Full Autonomous`, `Semi-Autonomous / Gated`, `Paused`, and `Emergency Stop`.
-* **Dynamic Financial Thresholds**: $250, $500, $1,000, $2,500, or Unlimited. Requests below the threshold are evaluated and approved autonomously by the Supervisor Agent; requests exceeding the limit are automatically escalated to human managers.
-* **Live Supervisor Operational Assistant**: Natural-language chat grounded in real-time ticket state, orders, agent runs, and fleet health.
-
-### 4. Automated Transactional Email System (Resend)
-* Sends branded transactional emails on every key lifecycle event directly from the backend.
-* Zero configuration needed for customers or managers.
-* Includes intelligent **Resend Sandbox routing** to deliver live emails directly to the account owner's verified inbox (`shreyashbiit1508@gmail.com`) when using `onboarding@resend.dev`.
-
-### 5. Full Customer Care Portal
-* Dedicated consumer experience for end-users to raise issues, link orders, check real-time progress, and converse with an AI Support Assistant.
-* Includes confetti celebration on ticket submission, active warranty badges, and visibility-aware polling.
-
-### 6. Independent 5-Point Verification Audit
-* Before closing any ticket, the Verification Agent audits:
-  1. Have all planned DAG steps completed?
-  2. Is the customer and order evidence dossier complete?
-  3. Does the solution strictly adhere to company policy?
-  4. Was required supervisor approval obtained and logged?
-  5. Was the customer informed with accurate context?
-
-### 7. Dual Theme System (Dark Mode Default)
-* Built on pure CSS custom properties (`--bg-primary: #09090b`, `--text-primary: #f4f4f7`).
-* Includes one-click `ThemeToggle` across the landing page, login, register, dashboard, and customer portal.
-
----
-
-## 🧠 The 8-Agent Supervisory Topology
-
-ResolveAI avoids the unreliability of monolithic single-prompt LLMs by adopting a **specialized, decoupled multi-agent topology**:
-
-| Agent | Icon | Role & Responsibility | Internal Tools Used | Zod Output Schema |
+| Agent | Icon | Specialized Responsibility | Internal Tools Used | Zod Output Schema |
 | :--- | :---: | :--- | :--- | :--- |
-| **Supervisor Agent** | `⚡` | Supervises the complete fleet, evaluates approval requests autonomously, enforces financial limits, provides conversational operational telemetry, and halts rogue execution. | Fleet Telemetry, Control Plane, Policy Audit | `SupervisorDecisionSchema` |
-| **Orchestrator Agent** | `◉` | Formulates 6-step DAG plan, manages execution transitions, enforces dependencies, handles pause/resume. | DAG State Machine | `PlanOutputSchema` |
-| **Triage Agent** | `△` | Analyzes ticket title/description, extracts entities (order IDs, product names), classifies intent & urgency. | Semantic Classifier | `TriageOutputSchema` |
-| **Investigation Agent** | `⌕` | Queries CRM databases, retrieves transaction records, computes carrier delivery age against warranty window. | `getCustomer()`, `getOrder()`, `getCustomerOrders()`, `getTicketHistory()` | `InvestigationOutputSchema` |
-| **Policy Agent** | `▣` | Searches active policy database, evaluates warranty rules against evidence, flags required approvals. | `searchPolicies()` | `PolicyOutputSchema` |
-| **Action Agent** | `⚡` | Executes allowlisted internal tools. Pauses at approval gate on sensitive operations. | `createReplacementRequest()`, `updateTicketStatus()`, `createInternalTask()`, `createEscalation()` | `ActionOutputSchema` |
-| **Communication Agent** | `✦` | Drafts personalized customer resolution emails and internal briefings strictly grounded in verified facts. | Contextual Formatter | `CommunicationOutputSchema` |
-| **Verification Agent** | `✓` | Independent auditor running a 5-point verification checklist before authorizing final ticket closure. | Audit Validator | `VerificationOutputSchema` |
+| **Supervisor Agent** | `◈` | Oversees fleet health, evaluates approval requests autonomously, enforces financial thresholds, provides operational telemetry chat, and executes emergency halts. | Fleet Telemetry, Control Plane, Policy Audit | `SupervisorDecisionSchema` |
+| **Orchestrator Agent** | `◉` | Formulates 6-step dynamic DAG resolution plan, coordinates agent handoffs, enforces step dependencies, and manages pause/resume states. | DAG State Machine | `PlanOutputSchema` |
+| **Triage Agent** | `△` | Analyzes ticket title/description, extracts entities (order IDs, product names), and classifies category and urgency. | Semantic Classifier | `TriageOutputSchema` |
+| **Investigation Agent** | `⌕` | Queries CRM databases, retrieves purchase records, and computes carrier delivery age against warranty policy windows. | `getCustomer()`, `getOrder()`, `getCustomerOrders()`, `getTicketHistory()` | `InvestigationOutputSchema` |
+| **Policy Agent** | `▣` | Searches active policy database, evaluates warranty rules against evidence, and flags actions requiring authorization. | `searchPolicies()` | `PolicyOutputSchema` |
+| **Action Agent** | `⚡` | Executes allowlisted internal tools in simulated environment; halts at authorization gate for sensitive actions. | `createReplacementRequest()`, `updateTicketStatus()`, `createInternalTask()`, `createEscalation()` | `ActionOutputSchema` |
+| **Communication Agent** | `✦` | Generates personalized customer notifications and internal briefings strictly grounded in verified evidence dossiers. | Contextual Formatter | `CommunicationOutputSchema` |
+| **Verification Agent** | `✓` | Independent auditor running a 5-point checklist before authorizing final ticket resolution. | Audit Validator | `VerificationOutputSchema` |
 
 ---
 
-## 🛡️ Autonomous AI Mode & Governance Control Plane
+## 🛡️ AI Governance & Safety Controls
 
-The **ResolveAI Supervisor Agent** introduces policy-governed autonomy:
+ResolveAI adopts a clear engineering philosophy:
+> **AI models can reason and recommend, but execution is constrained by deterministic authorization gates, policy boundaries, schema validation, and control-plane enforcement.**
 
-```text
-Policy Agent
-     │
-     ▼
-Approval Request
-     │
-     ▼
-Supervisor Agent
-     │
-     ├── In "Full Autonomous" mode AND value <= threshold ($500)?
-     │   ├── YES -> Evaluates evidence & policy compliance autonomously.
-     │   │          Signs approval as "AI Supervisor (Autonomous)".
-     │   │          Hands off to Action Agent for immediate execution.
-     │   │
-     │   └── NO  -> Escalates to Human Manager Approval Queue.
-     │              Awaits human signature before Action Agent runs.
-```
+### 1. Autonomy Modes & Thresholds
+Administrators configure autonomy through the **AI Control Center**:
+* **Full Autonomous Mode:** The Supervisor Agent evaluates approval requests autonomously against active policy rules. If the financial value is at or below the configured threshold, the Supervisor authorizes the action and triggers execution.
+* **Semi-Autonomous / Gated Mode:** All sensitive actions (replacements, cancellations, refunds) pause at the Human-in-the-Loop approval gate for manager authorization.
+* **Configurable Financial Thresholds:** Tiered limits ($250, $500, $1,000, $2,500, Unlimited). Any request exceeding the threshold is automatically escalated to a human operations manager regardless of autonomy mode.
 
-### Governance Capabilities:
-1. **Financial Threshold Guardrails:** Administrators set exact spending boundaries ($250, $500, $1000, $2500, Unlimited).
-2. **Instant Pause Directive:** Halts new AI workflow launches across the platform with one click.
-3. **Emergency Stop (Killswitch):** Actively halts in-flight agent runs, blocks pending tool executions, and logs security audit records.
-4. **Natural-Language Operational Telemetry:** Query the Supervisor about specific tickets (`"What is the status of TKT-001?"`), fleet load, or policy compliance.
+### 2. Execution Control Plane (Pause & Killswitch)
+* **Pause Directive:** Halts new autonomous AI workflows across the platform instantly while allowing staff to review existing cases.
+* **Emergency Stop:** Actively halts in-flight agent runs, blocks pending tool invocations, and appends security audit records. Both `orchestrator.js` and `supervisorAgent.js` enforce backend execution checks that return `403 Forbidden` if active operations are paused or stopped.
+
+---
+
+## 🔐 AI Security & Defense-in-Depth
+
+Defense-in-depth controls reduce the risk of unauthorized AI actions and data leakage:
+
+| Threat Category | Potential Risk | ResolveAI Defense Mechanism | Code Implementation |
+| :--- | :--- | :--- | :--- |
+| **Prompt Injection** | Customer ticket attempts to override system prompt | Untrusted customer input is isolated in dedicated data delimiters; system instructions explicitly forbid instruction execution from ticket text. | `aiService.js` |
+| **AI Hallucination** | LLM invents nonexistent refund amounts or tracking IDs | Structured output validation; communication agent is strictly restricted to verified evidence dossier fields. | `validators/index.js`, `communicationAgent.js` |
+| **Unauthorized Action** | AI executes unapproved commands or arbitrary code | Hardcoded tool allowlist; tool execution occurs only through pre-registered JavaScript functions. | `tools/index.js` |
+| **Privilege Escalation** | Customer attempts to access staff endpoints or admin tools | JWT authentication with role-based route middleware (`requireRole(['admin', 'manager'])`). | `authMiddleware.js` |
+| **Cross-Tenant Access** | Customer tries to access another customer's ticket data | Strict customer ownership verification; requests for other customer data return `403 Forbidden`. | `customerPortalController.js` |
+| **Malformed Output** | AI generates invalid or unparseable JSON | Strict Zod schema parsing; invalid outputs trigger controlled heuristic fallbacks without crashing. | `validators/index.js` |
+| **Duplicate Actions** | Network retries trigger double replacements or emails | Idempotency keys generated from ticket ID, event type, and run hash prevent duplicate executions. | `emailService.js`, `actionAgent.js` |
+| **Email Header Injection** | Attacker inserts CRLF (`\r\n`) to inject BCC recipients | Strict header sanitization strips carriage returns and newlines; strict regex validates email syntax. | `emailService.js` |
+| **API Denial of Service** | Rapid repeated requests flood AI endpoints | Express rate limiting on sensitive routes (auth, email dispatch, AI workflow triggers). | `middleware/rateLimiter.js` |
 
 ---
 
 ## 📧 Automated Transactional Email System (Resend)
 
-ResolveAI provides backend-driven transactional email dispatch powered by **Resend**:
+ResolveAI features an automated transactional email subsystem powered by **Resend**:
+
+```text
+Backend Event Trigger ───> EmailService ───> Template Renderer ───> Resend API ───> Customer Inbox
+                                  │
+                                  ├── If Resend Free Tier Sandbox Constraint (403/422):
+                                  └── Safely routes live email to verified developer inbox
+```
 
 ### Supported Transactional Events:
-1. `TICKET_CREATED`: Sent when a customer submits a new ticket.
-2. `TICKET_STATUS_UPDATED`: Sent when an agent or workflow advances ticket progress.
+1. `TICKET_CREATED`: Sent when a customer submits a new case.
+2. `TICKET_STATUS_UPDATED`: Sent when investigation or DAG progress advances.
 3. `APPROVAL_REQUIRED`: Dispatched to operations managers when a sensitive action requires human authorization.
 4. `ACTION_COMPLETED`: Sent when warehouse replacement is provisioned.
 5. `TICKET_RESOLVED`: Comprehensive resolution report with replacement tracking numbers.
 6. `ADMIN_TEST`: Verification test dispatch triggered from the Admin Settings console.
 
-### Resend Sandbox Compatibility:
-When running with an unverified free domain (`onboarding@resend.dev`), Resend restricts outbound emails to the account owner's email (`shreyashbiit1508@gmail.com`). ResolveAI includes **automatic sandbox fallback routing**:
-- If an email is intended for a customer (e.g. `elena.rostova@example.com`), the backend catches the sandbox constraint and **safely routes the rendered email directly to your verified inbox (`shreyashbiit1508@gmail.com`)**, prepending an informative notification badge.
-- As soon as a custom domain is verified in Resend, emails seamlessly deliver directly to external recipients.
+### Sandbox Compatibility:
+When running with an unverified domain (`onboarding@resend.dev`), Resend restricts outbound delivery to the account owner's email address. ResolveAI incorporates **automatic sandbox fallback routing**:
+- If an email is intended for a customer (e.g., `elena.rostova@example.com`), the backend detects the sandbox constraint and **routes the live email to the verified developer email**, prepending a notification banner indicating the intended recipient.
+- Once a custom domain is verified in Resend, emails deliver directly to external recipients without configuration changes.
 
 ---
 
 ## 👥 Customer Care Portal
 
-The dedicated customer portal (`/customer`) provides end-users with transparency into the resolution process:
+The customer portal (`/customer`) provides an interface for consumers to manage support cases:
 
 * **Customer Home (`/customer`):** High-level summary of active tickets, resolved issues, customer account tier, and quick actions.
-* **Raise an Issue (`/customer/issues/new`):** Clean submission flow with order selection, issue category picker, description textarea, and celebratory confetti upon completion.
-* **Issue Tracking (`/customer/issues/:id`):** Real-time visibility-aware progress tracker with step-by-step resolution status.
+* **Raise an Issue (`/customer/issues/new`):** Submission flow with order selection, issue category picker, description textarea, and celebratory confetti upon completion.
+* **Issue Tracking (`/customer/issues/:id`):** Real-time progress tracker with step-by-step resolution status and visibility-aware polling.
 * **Order History (`/customer/orders`):** View past purchases, order amounts, and one-click "Report Problem" buttons.
 * **AI Support Assistant (`/customer/support`):** Real-time conversational agent grounded in the customer's orders and company policies.
 * **Profile & Notification Settings (`/customer/profile`):** Manage email delivery preferences (opt-in / opt-out).
 
 ---
 
-## 🔄 End-to-End Workflow & State Machine
+## 🔄 End-to-End Workflow & Diagrams
+
+### Sequence of an Elena Rostova Case Resolution
 
 ```mermaid
 sequenceDiagram
@@ -346,7 +320,7 @@ sequenceDiagram
     AI->>Tools: searchPolicies(POL-001) -> Eligible under 14-day window
     AI-->>Orch: Action: create_replacement_request (Requires Approval: TRUE)
     
-    alt Autonomous Mode Active & Amount <= $500
+    alt Autonomous Mode Active & Amount <= Configured Threshold ($500)
         Orch->>Sup: Evaluate Approval Request Autonomously
         Sup->>Sup: Verify evidence dossier & policy rules
         Sup-->>Orch: APPROVE (Autonomous AI Signature)
@@ -369,59 +343,63 @@ sequenceDiagram
 
 ---
 
-## 🔒 AI Security & Defense-in-Depth
+## 🖼️ User Interface & Screenshots Gallery
 
-| Security Domain | Defense Mechanism | Implementation |
-| :--- | :--- | :--- |
-| **Prompt Injection Protection** | Strict separation of instructions and data | Customer text is placed in isolated data blocks; strict system prompts instruct models to ignore instructions embedded in user input. |
-| **Output Hallucination Prevention** | Factual grounding & Zod schema validation | Every LLM response is strictly parsed and validated against Zod schemas; invalid payloads fail safely. |
-| **Privilege Escalation Prevention** | Strict RBAC & customer data isolation | Customers are prevented from viewing or modifying tickets belonging to other customer accounts (`403 Forbidden`). |
-| **Unauthorized Action Execution** | Tool allowlisting & approval gates | Agents can only invoke predefined tools; physical actions require human manager or Supervisor authorization. |
-| **Email Injection Prevention** | CRLF sanitization & regex validation | Header values are sanitized against multi-line injection attacks (`\r`, `\n`); idempotency keys prevent duplicate dispatches. |
-| **System Denial of Service** | Rate limiters & Execution control plane | Express rate limiters protect API routes; administrators can pause operations or trigger emergency stops instantly. |
+All screenshots below are included in the repository under [`docs/screenshots/`](./docs/screenshots/):
 
----
+### 1. Futuristic Liquid-Metal Landing Page Hero (Dark & Light Mode)
+<p align="center">
+  <img src="./docs/screenshots/landing_page_dark.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Dark Mode" width="49%" />
+  <img src="./docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Light Mode" width="49%" />
+</p>
 
-## 🚶 Example User Journey
+### 2. Multi-Agent Fleet Showcase & Polished Status Monitor
+<p align="center">
+  <img src="./docs/screenshots/agent_fleet_showcase.png" alt="8-Agent Autonomous Fleet Showcase" width="95%" />
+</p>
 
-### Case Study: Elena Rostova — Damaged Delivery Replacement
+### 3. Operations Dashboard & Real-Time Fleet Health
+<p align="center">
+  <img src="./docs/screenshots/dashboard_overview.png" alt="ResolveAI Operations Dashboard" width="95%" />
+</p>
 
-1. **Inbound Case:** Elena Rostova submits ticket `#tkt-001` via the Customer Portal: *"My Astra SoundPro Wireless ANC Headphones arrived damaged in transit. The box was crushed and the left earcup is cracked. I need a replacement."*
-2. **Support Agent Login:** Sarah Connor logs in via 1-click demo persona and opens `#tkt-001`.
-3. **Trigger Workflow:** Sarah clicks **"Run ResolveAI"**.
-4. **Autonomous Analysis:**
-   * **Triage Agent:** Detects `damaged_product`, high priority, extracts product name and order reference.
-   * **Investigation Agent:** Queries customer CRM and Order `#ORD-4821`. Identifies delivery date was 3 days ago.
-   * **Policy Agent:** Evaluates `POL-001` (14-day damaged delivery replacement policy). Recommends replacement request. Flags action as requiring authorization.
-5. **Approval Evaluation:**
-   * If **Autonomous AI Mode** is active ($349 < $500 threshold), the **Supervisor Agent** evaluates the evidence and policy compliance, approving the replacement autonomously.
-   * If in **Gated Mode**, the workflow pauses and alerts James Rodriguez (Manager) in the Approvals Queue.
-6. **Execution & Closure:**
-   * **Action Agent:** Provisions warehouse replacement shipment `REP-7466` with status `DISPATCHED`.
-   * **Communication Agent:** Generates personalized email to Elena quoting the replacement ID and warehouse dispatch status.
-   * **Email Dispatch:** Resend delivers the update email to Elena (or verified developer email in sandbox mode).
-   * **Verification Agent:** Audits 5 checklist criteria. All 5 pass. Status updated to `RESOLVED`.
-   * **Audit Log:** Complete 18-step timeline saved with timestamps and agent thoughts.
+### 4. Interactive 6-Step DAG Execution Workspace & Human-in-the-Loop Gate
+<p align="center">
+  <img src="./docs/screenshots/ticket_workspace_paused_gate.png" alt="Ticket Workspace Paused at Human Approval Gate" width="49%" />
+  <img src="./docs/screenshots/human_approval_gate.png" alt="Human-in-the-Loop Supervisor Approval Queue" width="49%" />
+</p>
+
+### 5. Verified Case Resolution with Append-Oriented Audit Trail
+<p align="center">
+  <img src="./docs/screenshots/ticket_workspace_resolved.png" alt="Verified Resolution State with 5-Point Audit Checklist" width="95%" />
+</p>
+
+### 6. Rapid Evaluation Login Screen with 1-Click Demo Personas
+<p align="center">
+  <img src="./docs/screenshots/login_page.png" alt="ResolveAI Authentication & 1-Click Personas" width="60%" />
+</p>
 
 ---
 
 ## 💻 Technology Stack
 
-| Layer | Technology | Details & Implementation |
-| :--- | :--- | :--- |
-| **Frontend Framework** | **React 19** | Modern functional components, hooks, React Router v7. |
-| **Build Tool** | **Vite 8** | Instant HMR, production build in < 250ms. |
-| **3D Graphics** | **Three.js (0.186)** | Liquid-metal hero sculpture with `MeshPhysicalMaterial`. |
-| **Icons & Visuals** | **Lucide React + Canvas Confetti** | Iconography and delight micro-animations. |
-| **Styling & Theming** | **Vanilla CSS Design System** | Pure CSS design tokens, Dark Mode default, Light Mode toggle. |
-| **Backend Runtime** | **Node.js (v18+)** | Modern ES Modules (`"type": "module"`). |
-| **Web Server** | **Express (v4.21)** | RESTful API, CORS, JSON body parser, rate limiters. |
-| **AI Engine** | **Google Gemini Flash** | `gemini-flash-latest` / `gemini-3.5-flash` with structured JSON output. |
-| **Fallback Engine** | **Deterministic Heuristic Reasoner** | Built-in zero-downtime offline execution fallback. |
-| **Email Provider** | **Resend (v6.31)** | Transactional email provider with sandbox routing. |
-| **Database** | **Supabase PostgreSQL & Local JSON** | 9-table relational schema + self-healing file-based store. |
-| **Validation** | **Zod (v3.24)** | Strict schema validation for all API inputs and AI outputs. |
-| **Security & Auth** | **JWT + bcryptjs** | Signed token authorization and hashed password storage. |
+| Layer | Technology | Version | Purpose in ResolveAI |
+| :--- | :--- | :--- | :--- |
+| **Frontend Framework** | React | `^19.2.8` | Component architecture, state management, hooks. |
+| **Client Router** | React Router DOM | `^7.18.4` | Single-page application routing, protected route wrappers. |
+| **Frontend Bundler** | Vite | `^8.3.0` | Build tooling, fast hot module replacement (HMR). |
+| **3D Canvas Engine** | Three.js | `^0.186.1` | Procedural liquid-metal hero mesh with `MeshPhysicalMaterial`. |
+| **Visual Elements** | Lucide React | `^1.49.0` | Consistent iconography across staff and customer views. |
+| **Backend Runtime** | Node.js | `>=18.0.0` | ES Modules runtime (`"type": "module"`). |
+| **Web Server** | Express | `^4.21.2` | RESTful API server, middleware pipeline, error handling. |
+| **AI LLM Engine** | Google Gemini | Flash 3.5 / Flash Latest | Agentic reasoning, semantic extraction, decision generation. |
+| **Fallback Engine** | Heuristic Reasoner | Custom | Deterministic offline execution guaranteeing uptime during API limits. |
+| **Email Provider** | Resend | `^6.31.0` | Transactional email delivery with sandbox routing. |
+| **Primary Database** | Supabase PostgreSQL | `^2.49.1` | Relational storage for production environments. |
+| **Fallback Store** | File-backed JSON | Custom | Self-healing local database for offline development. |
+| **Schema Validation** | Zod | `^3.24.2` | Strict schema validation for API inputs and agent outputs. |
+| **Authentication** | JWT + bcryptjs | `^9.0.2` / `^3.0.2` | Token-based authentication and password hashing. |
+| **Rate Limiting** | express-rate-limit | `^8.7.0` | Protection against abuse on public endpoints. |
 
 ---
 
@@ -431,10 +409,10 @@ sequenceDiagram
 Astra-4/
 ├── .agents/
 │   └── rules/
-│       └── ui-ux.md                 # Design rules (Liquid metal, typography, grid)
+│       └── ui-ux.md                 # UI/UX design rules (Liquid metal, typography, grid)
 ├── backend/                         # Express REST API & Multi-Agent Engine
 │   ├── data/
-│   │   └── store.json               # Self-healing persistent JSON database
+│   │   └── store.json               # Self-healing local JSON database
 │   ├── src/
 │   │   ├── agents/                  # 8 Specialized AI Agents
 │   │   │   ├── supervisorAgent.js   # Supervisory AI, autonomous approvals, control plane
@@ -462,7 +440,7 @@ Astra-4/
 │   │   ├── db/
 │   │   │   ├── seed.js              # Database seed CLI script
 │   │   │   ├── seedData.js          # Initial seed personas, orders, policies
-│   │   │   └── store.js             # Supabase & self-healing local DB engine
+│   │   │   └── store.js             # Dual-store database engine
 │   │   ├── middleware/
 │   │   │   ├── authMiddleware.js    # JWT verification & RBAC
 │   │   │   ├── errorHandler.js      # Global error handling
@@ -482,6 +460,9 @@ Astra-4/
 │   ├── test-supervisor-autonomy.js  # Supervisor autonomy test suite
 │   ├── package.json
 │   └── render.yaml                  # Render deployment configuration
+├── docs/
+│   ├── DEMO_SCRIPT.md               # Timed 3-minute hackathon video script
+│   └── screenshots/                 # Screenshot gallery & walkthrough GIF
 ├── frontend/                        # React 19 + Vite Web Application
 │   ├── public/                      # Static assets & icons
 │   ├── src/
@@ -521,6 +502,7 @@ Astra-4/
 │   ├── package.json
 │   ├── vercel.json                  # Vercel SPA rewrite configuration
 │   └── vite.config.js
+├── LICENSE                          # MIT License
 ├── DEPLOYMENT.md                    # Detailed deployment instructions
 ├── supabase-schema.sql              # Supabase PostgreSQL schema with RLS
 └── package.json                     # Root orchestrator scripts
@@ -530,32 +512,34 @@ Astra-4/
 
 ## 🔌 REST API Documentation
 
-### Authentication & Users
-* `POST /api/auth/login` — Authenticate user and receive signed JWT.
-* `POST /api/auth/register` — Register a new account.
-* `GET /api/auth/me` — Retrieve current authenticated user profile.
+All routes under `/api` require `Authorization: Bearer <token>` unless marked Public.
 
-### Tickets & AI Multi-Agent Workflow
-* `GET /api/tickets` — List tickets with optional status and priority filters.
+### Authentication
+* `POST /api/auth/login` (Public) — Authenticate user and receive signed JWT.
+* `POST /api/auth/register` (Public) — Register a new account.
+* `GET /api/auth/me` — Retrieve authenticated user profile.
+
+### Tickets & Multi-Agent Execution
+* `GET /api/tickets` — List tickets with optional status, priority, and search filters.
 * `POST /api/tickets` — Create a new customer support ticket.
 * `GET /api/tickets/:id` — Retrieve ticket details, active run, and audit logs.
 * `POST /api/tickets/:id/run` — Launch autonomous 8-agent resolution workflow.
 * `POST /api/tickets/:id/notes` — Append internal team notes to ticket.
 
-### AI Control Center & Supervisor Agent
-* `GET /api/supervisor/status` — Operational status, fleet load, and autonomy mode.
-* `POST /api/supervisor/settings` — Update autonomy mode and financial threshold.
-* `POST /api/supervisor/chat` — Interactive natural-language queries to Supervisor.
-* `POST /api/supervisor/emergency-stop` — Trigger emergency halt of active runs.
+### AI Control Center & Supervisor
+* `GET /api/supervisor/status` — Operational status, fleet health, and autonomy mode.
+* `POST /api/supervisor/settings` (Admin) — Update autonomy mode and financial threshold.
+* `POST /api/supervisor/chat` — Query Supervisor Agent with natural language inquiries.
+* `POST /api/supervisor/emergency-stop` (Admin) — Trigger emergency halt of active runs.
 
 ### Approvals
-* `GET /api/approvals` — List pending, approved, and rejected authorization requests.
-* `POST /api/approvals/:id/approve` — Authorize action and resume workflow.
-* `POST /api/approvals/:id/reject` — Reject action with supervisor reviewer notes.
+* `GET /api/approvals` — List authorization requests (`PENDING`, `APPROVED`, `REJECTED`).
+* `POST /api/approvals/:id/approve` (Manager/Admin) — Authorize action and resume workflow.
+* `POST /api/approvals/:id/reject` (Manager/Admin) — Reject action with reviewer notes.
 
 ### Transactional Emails
 * `GET /api/emails/status` — Operational status of email subsystem.
-* `POST /api/emails/test` — Protected admin test email dispatch.
+* `POST /api/emails/test` (Admin) — Trigger test verification email.
 * `GET /api/emails/logs` — Outbound transactional email audit log.
 
 ### Customer Portal
@@ -568,19 +552,23 @@ Astra-4/
 
 ---
 
-## 🗄️ Database Architecture & Schema
+## 🗄️ Database Architecture & Dual-Store Engine
 
-ResolveAI supports **Supabase PostgreSQL** and a **self-healing local store**:
+ResolveAI implements a dual-store database architecture:
 
-1. **`users`**: User accounts, hashed passwords, roles (`admin`, `manager`, `agent`, `customer`).
-2. **`customers`**: CRM directory, verified email addresses, tier status (`VIP Enterprise`, `Standard`).
-3. **`orders`**: Transaction records, tracking numbers, items, purchase and delivery timestamps.
-4. **`policies`**: Active company policies (`POL-001`, `POL-002`, etc.) with eligibility clauses.
-5. **`tickets`**: Support cases with priority, status (`OPEN`, `INVESTIGATING`, `WAITING_APPROVAL`, `RESOLVED`).
-6. **`agent_runs`**: Execution runs storing the dynamic DAG plan, active step, and verification results.
-7. **`approvals`**: Authorization requests with financial risk levels, supervisor decisions, and reviewer notes.
-8. **`email_notifications`**: Outbound email logs, delivery IDs, status (`SENT`, `QUEUED`, `FAILED`).
-9. **`audit_logs`**: Immutable 18-point audit trail recording every agent action, tool invocation, and decision.
+1. **Production Mode (Supabase PostgreSQL):** Used in production deployments. Backed by PostgreSQL with Row Level Security (RLS) policies. Schema defined in [`supabase-schema.sql`](./supabase-schema.sql).
+2. **Development / Fallback Mode (Local File Store):** Used for offline development and local quickstarts. Backed by a self-healing JSON store (`backend/data/store.json`) that seeds automatically on boot if empty.
+
+### Verified Database Tables:
+* **`users`**: User credentials, hashed passwords, roles (`admin`, `manager`, `agent`, `customer`).
+* **`customers`**: CRM directory, verified email addresses, tier status (`VIP Enterprise`, `Standard`).
+* **`orders`**: Transaction records, tracking numbers, items, purchase and delivery timestamps.
+* **`policies`**: Active company policies (`POL-001`, `POL-002`, etc.) with eligibility clauses.
+* **`tickets`**: Support cases with priority, status (`OPEN`, `INVESTIGATING`, `WAITING_APPROVAL`, `RESOLVED`).
+* **`agent_runs`**: Execution runs storing the dynamic DAG plan, active step, and verification results.
+* **`approvals`**: Authorization requests with financial risk levels, supervisor decisions, and reviewer notes.
+* **`email_notifications`**: Outbound email logs, delivery IDs, status (`SENT`, `QUEUED`, `FAILED`).
+* **`audit_logs`**: Append-oriented audit trail recording every agent action, tool invocation, and decision.
 
 ---
 
@@ -591,15 +579,15 @@ ResolveAI provides pre-seeded **1-click evaluation personas** on the login scree
 | Persona | Role | Email | Password | Access Permissions |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sarah Connor** | `agent` | `sarah.connor@resolveai.io` | `password123` | Ticket Workspace, Trigger AI Runs, View Activity |
-| **James Rodriguez** | `manager` | `james.rodriguez@resolveai.io` | `password123` | Approvals Queue, Authorize/Reject, Policies |
-| **Alex Vance** | `admin` | `admin@resolveai.io` | `password123` | AI Control Center, Email Testing, Autonomy Modes |
+| **James Rodriguez** | `manager` | `james.rodriguez@resolveai.io` | `password123` | Approvals Queue, Authorize/Reject Actions, Policies |
+| **Alex Vance** | `admin` | `admin@resolveai.io` | `password123` | AI Control Center, Email Testing, Autonomy Settings |
 | **Elena Rostova** | `customer` | `elena.rostova@example.com` | `password123` | Customer Portal, Raise Issues, Orders, AI Chat |
 
 ---
 
 ## 🔑 Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root:
 
 ```env
 # Server Configuration
@@ -607,8 +595,8 @@ PORT=5001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 
-# Security & Tokens
-JWT_SECRET=resolveai-hackathon-jwt-secret-key-2026-very-secure
+# Security & Authentication
+JWT_SECRET=replace-with-a-secure-jwt-secret-string
 
 # Google Gemini AI Integration
 GEMINI_API_KEY=your-gemini-api-key-here
@@ -622,9 +610,9 @@ MANAGER_NOTIFICATION_EMAIL=manager@resolveai.io
 EMAIL_MODE=provider
 RESEND_TEST_RECIPIENT=your-verified-email@example.com
 
-# Database (Supabase PostgreSQL - Optional)
-NEXT_PUBLIC_SUPABASE_URL=https://jrvncrgcmmnrznugoeur.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
+# Database (Supabase PostgreSQL - Optional, falls back to local store)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
 ---
@@ -635,32 +623,43 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
 * **Node.js**: v18.0.0 or higher
 * **npm**: v9.0.0 or higher
 
-### 1. Clone & Install
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/shreyash-bhosale/Astra-4.git
 cd Astra-4
-npm run install:all
 ```
 
-### 2. Configure Environment
+### 2. Install Dependencies
+```bash
+# Install backend and frontend dependencies
+cd backend && npm install
+cd ../frontend && npm install
+cd ..
+```
+
+### 3. Configure Environment
 ```bash
 cp .env.example .env
-# Edit .env with your Google Gemini API key and credentials
+# Edit .env with your Google Gemini API key or leave blank for deterministic fallback mode
 ```
 
-### 3. Run Development Servers
+### 4. Run Development Servers
 ```bash
-npm run dev
+# Terminal 1: Start Backend (Port 5001)
+npm run dev:backend
+
+# Terminal 2: Start Frontend (Port 5173)
+npm run dev:frontend
 ```
-* **Frontend:** `http://localhost:5173`
+* **Frontend Application:** `http://localhost:5173`
 * **Backend API:** `http://localhost:5001`
-* **API Health Check:** `http://localhost:5001/api/health`
+* **Health Check:** `http://localhost:5001/api/health`
 
 ---
 
-## 🧪 Automated Testing & Audit Verification
+## 🧪 Automated Testing & Audit Evidence
 
-ResolveAI includes comprehensive automated test suites covering all operational layers:
+ResolveAI includes automated test suites covering the entire system:
 
 ### 1. Full System Audit Suite (23 Assertions)
 ```bash
@@ -670,14 +669,45 @@ node backend/test-full-system-audit.js
 ======================================================
 🚀 RESOLVEAI FULL SYSTEM AUDIT & VERIFICATION SUITE
 ======================================================
-Phase 1: Authentication & RBAC (Admin & Customer)               — 4/4 PASSED
-Phase 2: BUG 01 Policy Creation & Persistence                  — 3/3 PASSED
-Phase 3: BUG 02 & BUG 06 Supervisor AI Telemetry               — 2/2 PASSED
-Phase 4: BUG 11 Customer Orders & Spend Aggregation             — 4/4 PASSED
-Phase 5: BUG 08 Internal Notes Persistence                     — 3/3 PASSED
-Phase 6: BUG 10 Control Plane Enforcement (Pause / Stop)       — 3/3 PASSED
-Phase 7: BUG 05 & BUG 07 Customer Portal Issues & Orders       — 3/3 PASSED
-Phase 8: Security & Customer Isolation (403 Forbidden checks)  — 1/1 PASSED
+--- Phase 1: Authentication & RBAC ---
+✅ [PASS] Admin login successful
+✅ [PASS] Admin role verified
+✅ [PASS] Customer login successful
+✅ [PASS] Customer role verified
+
+--- Phase 2: BUG 01 Policy Creation & Persistence ---
+✅ [PASS] Policy creation succeeds with formatted POL-xxx ID
+✅ [PASS] Newly created policy persists in policies list
+✅ [PASS] Invalid policy rejected with 400 Bad Request
+
+--- Phase 3: BUG 02 & BUG 06 Supervisor AI Telemetry ---
+✅ [PASS] Supervisor answers autonomous mode telemetry query
+✅ [PASS] Supervisor inspects specific ticket contextually
+
+--- Phase 4: BUG 11 Customer Orders & Spend Aggregation ---
+✅ [PASS] Customers list retrieved
+✅ [PASS] Found sample customer record (Elena Rostova)
+✅ [PASS] Customer ordersCount correctly calculated: 1
+✅ [PASS] Customer totalSpent correctly aggregated: $349
+
+--- Phase 5: BUG 08 Internal Notes Persistence ---
+✅ [PASS] Internal note 1 added successfully
+✅ [PASS] Multiple internal notes persist distinctly without overwriting
+✅ [PASS] Empty/whitespace internal note rejected with 400
+
+--- Phase 6: BUG 10 Execution Control Plane (Pause / Stop Enforcement) ---
+✅ [PASS] Execution blocked when Autonomous AI is PAUSED
+✅ [PASS] Execution blocked when EMERGENCY STOP is engaged
+✅ [PASS] Autonomous AI Mode restored cleanly
+
+--- Phase 7: BUG 05 & BUG 07 Customer Portal Issues & Orders ---
+✅ [PASS] Customer can view own orders list
+✅ [PASS] Customer successfully created Issue 1
+✅ [PASS] Customer successfully created Issue 2 (Multiple issues permitted)
+
+--- Phase 8: Security & Customer Isolation ---
+✅ [PASS] Customer data isolation verified: Unauthorized ticket access returns 403 Forbidden
+
 ======================================================
 📊 AUDIT RESULTS SUMMARY: 23 PASSED | 0 FAILED
 ======================================================
@@ -715,38 +745,43 @@ cd frontend && npm run build
 ## 🚢 Production Deployment Guide
 
 ### Frontend on Vercel
-1. Set Framework Preset to **Vite**.
-2. Root Directory: `frontend`.
-3. Build Command: `npm run build`.
-4. Output Directory: `dist`.
+1. Framework Preset: **Vite**
+2. Root Directory: `frontend`
+3. Build Command: `npm run build`
+4. Output Directory: `dist`
 5. Environment Variables:
-   * `VITE_API_URL=https://your-backend-domain.com/api`
+   * `VITE_API_URL=https://your-backend-api.com/api`
 
 ### Backend on Render / Railway
-1. Environment: **Node**.
-2. Root Directory: `backend`.
-3. Build Command: `npm install`.
-4. Start Command: `node src/server.js`.
-5. Set environment variables from `.env`.
+1. Environment: **Node**
+2. Root Directory: `backend`
+3. Build Command: `npm install`
+4. Start Command: `node src/server.js`
+5. Configure environment variables according to the [Environment Variables](#-environment-variables) section.
 
 ---
 
-## ⏱️ Hackathon Judge 3-Minute Demo Script
+## 🎤 Hackathon Judge 3-Minute Demo Script
 
-| Elapsed | Action | What to Demonstrate |
-| :--- | :--- | :--- |
-| **0:00 - 0:40** | **Landing Page** | Open `http://localhost:5173`. Show the 3D Liquid-Metal Hero, toggle Dark/Light mode, and scroll down to the **8-Agent Fleet Showcase**. |
-| **0:40 - 1:20** | **Staff Operations** | Click "Login" -> 1-Click "Sarah Connor (Agent)". Open Ticket `#tkt-001`. Click **"Run ResolveAI"**. Watch the DAG plan execute: Triage -> Investigation -> Policy -> Halting at **Approval Gate**. |
-| **1:20 - 2:00** | **AI Control Center & Autonomy** | Switch to "Alex Vance (Admin)". Open **AI Control Center**. Show Autonomous AI Mode, adjust the financial limit to $500, and query the Supervisor: *"What is the status of TKT-001?"* |
-| **2:00 - 2:30** | **Manager Approval & Execution** | Switch to "James Rodriguez (Manager)". Open **Approvals Queue**. Review the evidence dossier and click **"Authorize Action & Resume"**. The Action Agent dispatches replacement `REP-7466`, the Communication Agent drafts the email, and the Verification Agent checks all 5 points. |
-| **2:30 - 3:00** | **Customer Portal & Email Delivery** | Switch to "Elena Rostova (Customer)" at `/customer`. Show the resolved ticket, tracking number, and check **`shreyashbiit1508@gmail.com`** for the real delivered Resend notification email. |
+| Time | Stage | Action | What to Observe |
+| :--- | :--- | :--- | :--- |
+| **0:00 - 0:30** | **Product & Architecture** | Open `http://localhost:5173`. Show the 3D Liquid-Metal Hero, toggle Dark/Light mode, and scroll to the **8-Agent Fleet Showcase**. | Procedural Three.js liquid chrome, responsive grid, clear supervisory agent architecture. |
+| **0:30 - 1:00** | **Case Investigation** | Click "Login" -> 1-Click "Sarah Connor (Agent)". Open Ticket `#tkt-001`. Click **"Run ResolveAI"**. | Watch the DAG plan execute: Triage -> Investigation -> Policy -> Halting at **Approval Gate**. |
+| **1:00 - 1:45** | **AI Governance & Control** | Switch to "Alex Vance (Admin)". Open **AI Control Center**. Show Autonomous AI Mode, adjust the financial limit to $500, and query the Supervisor: *"What is the status of TKT-001?"* | Policy-bounded autonomy settings, real-time telemetry chat grounded in live database state. |
+| **1:45 - 2:20** | **Manager Approval & Execution** | Switch to "James Rodriguez (Manager)". Open **Approvals Queue**. Review the evidence dossier and click **"Authorize Action & Resume"**. | Action Agent provisions replacement `REP-7466`, Communication Agent drafts email, Verification Agent checks all 5 points. |
+| **2:20 - 3:00** | **Customer Portal & Email Dispatch** | Switch to "Elena Rostova (Customer)" at `/customer`. Show the resolved ticket, tracking number, and inspect the transactional email dispatch log. | Complete loop: from customer problem to verified resolution with full audit trail. |
 
 ---
 
-## 📄 License & Team
+## 👨‍💻 Team & License
 
-Built with ❤️ for the **Agentic AI & Intelligent Systems Hackathon**.
+Built for the **Agentic AI & Intelligent Systems Hackathon**.
 
-* **Author / Lead Engineer:** Shreyash Bhosale
-* **Repository:** [https://github.com/shreyash-bhosale/Astra-4](https://github.com/shreyash-bhosale/Astra-4)
-* **License:** MIT License — free for open-source and commercial use.
+### Team Members:
+* **Sparsh Shrivastav** — Team Leader
+* **Shreyash Bhosale** — Engineer
+* **Vatsal Pithwa** — Engineer
+* **Uzair Pathan** — Engineer
+
+### License:
+This project is licensed under the **MIT License**. See the [`LICENSE`](./LICENSE) file for details.
