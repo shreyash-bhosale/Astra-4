@@ -597,6 +597,24 @@ export function handleClientMock(endpoint, options = {}) {
       };
     });
   }
+  if (endpoint === '/customer/notifications') {
+    return [
+      {
+        id: 'notif-1',
+        title: 'Warranty Claim Approved',
+        message: 'Your replacement request for Astra SoundPro ANC has been approved.',
+        time: '10m ago',
+        read: false
+      },
+      {
+        id: 'notif-2',
+        title: 'Supervisor Agent Verification',
+        message: 'Autonomous 5-point verification passed for Ticket #TKT-001.',
+        time: '1h ago',
+        read: true
+      }
+    ];
+  }
   if (endpoint.startsWith('/orders')) return store.orders;
   if (endpoint.startsWith('/policies')) {
     if (method === 'POST') {
