@@ -1,0 +1,13 @@
+{
+  "name": "resolveai-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ResolveAI - From customer issue to verified resolution — autonomously.",
+  "scripts": {
+    "dev": "node -e 'const { spawn } = require(\"child_process\"); const b = spawn(\"npm\", [\"run\", \"dev\"], { cwd: \"backend\", stdio: \"inherit\", shell: true }); const f = spawn(\"npm\", [\"run\", \"dev\"], { cwd: \"frontend\", stdio: \"inherit\", shell: true }); process.on(\"SIGINT\", () => { b.kill(); f.kill(); process.exit(); });'",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed": "npm --prefix backend run seed",
+    "build:frontend": "npm --prefix frontend run build"
+  }
+}

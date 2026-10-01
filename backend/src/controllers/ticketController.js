@@ -1,0 +1,177 @@
+import { db } from '../db/store.js';
+import { CreateTicketSchema, UpdateTicketSchema } from '../validators/index.js';
+import { orchestratorAgent } from '../agents/orchestrator.js';
+
+export const listTickets = async (req, res, next) => {
+  try {
+    const { status, priority, category, search } = req.query;
+    let tickets = db.find('tickets');
+
+    if (status) {
+      tickets = tickets.filter(t => t.status.toLowerCase() === status.toLowerCase());
+    }
+    if (priority) {
+      tickets = tickets.filter(t => t.priority.toLowerCase() === priority.toLowerCase());
+    }
+    if (category) {
+      tickets = tickets.filter(t => t.category && t.category.toLowerCase() === category.toLowerCase());
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      tickets = tickets.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q) ||
+        (t.category && t.category.toLowerCase().includes(q))
+      );
+    }
+
+    // Populate customer and order summaries
+    const populated = tickets.map(t => {
+      const customer = t.customer_id ? db.findById('customers', t.customer_id) : null;
+      const order = t.order_id ? db.findById('orders', t.order_id) : null;
+      const activeRun = db.findOne('agent_runs', r => r.ticket_id === t.id && (r.status === 'RUNNING' || r.status === 'WAITING_APPROVAL'));
+      return {
+        ...t,
+        customer: customer ? { id: customer.id, name: customer.name, email: customer.email, tier: customer.tier } : null,
+        order: order ? { id: order.id, product_name: order.product_name, amount: order.amount, status: order.status } : null,
+        hasActiveRun: !!activeRun,
+        activeRunStatus: activeRun?.status || null
+      };
+    });
+
+    // Sort descending by created_at
+    populated.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    return res.json(populated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const ticket = db.findById('tickets', id);
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const customer = ticket.customer_id ? db.findById('customers', ticket.customer_id) : null;
+    const order = ticket.order_id ? db.findById('orders', ticket.order_id) : null;
+    const assignedUser = ticket.assigned_user_id ? db.findById('users', ticket.assigned_user_id) : null;
+    const runs = db.find('agent_runs', r => r.ticket_id === id);
+    const auditLogs = db.find('audit_logs', l => l.ticket_id === id);
+    const pendingApproval = db.findOne('approvals', a => a.ticket_id === id && a.status === 'PENDING');
+
+    auditLogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    runs.sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+
+    return res.json({
+      ...ticket,
+      customer,
+      order,
+      assignedUser: assignedUser ? { id: assignedUser.id, name: assignedUser.name, role: assignedUser.role } : null,
+      latestRun: runs.length > 0 ? runs[0] : null,
+      pendingApproval,
+      auditLogs
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const createTicket = async (req, res, next) => {
+  try {
+    const validated = CreateTicketSchema.parse(req.body);
+
+    const ticket = db.insert('tickets', {
+      ...validated,
+      assigned_user_id: req.user?.id || null,
+      status: 'OPEN'
+    });
+
+    db.logAudit({
+      ticket_id: ticket.id,
+      event_type: 'TICKET_CREATED',
+      agent: 'System',
+      description: `Support ticket #${ticket.id.slice(0, 8)} created: '${ticket.title}'`,
+      metadata: { title: ticket.title, priority: ticket.priority }
+    });
+
+    return res.status(201).json(ticket);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const validated = UpdateTicketSchema.parse(req.body);
+
+    const existing = db.findById('tickets', id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    const updated = db.update('tickets', id, validated);
+
+    db.logAudit({
+      ticket_id: id,
+      event_type: 'TICKET_UPDATED',
+      agent: req.user ? req.user.name : 'System',
+      description: `Ticket properties updated: ${Object.keys(validated).join(', ')}`,
+      metadata: validated
+    });
+
+    return res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deleted = db.delete('tickets', id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    return res.json({ success: true, message: 'Ticket deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const runAIWorkflow = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const ticket = db.findById('tickets', id);
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+
+    // Execute orchestrator run
+    const result = await orchestratorAgent.runWorkflow({ ticketId: id });
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getTicketRuns = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const runs = db.find('agent_runs', r => r.ticket_id === id);
+    const logs = db.find('audit_logs', l => l.ticket_id === id);
+    logs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    return res.json({
+      runs,
+      timeline: logs
+    });
+  } catch (err) {
+    next(err);
+  }
+};
