@@ -165,6 +165,20 @@ class ApiClient {
     });
   }
 
+  getEmailStatus() {
+    return this.request('/emails/status');
+  }
+
+  sendAdminTestEmail() {
+    return this.request('/emails/test', {
+      method: 'POST'
+    });
+  }
+
+  getEmailLogs(limit = 25) {
+    return this.request(`/emails/logs?limit=${limit}`);
+  }
+
   // Approvals
   getApprovals(status) {
     const q = status ? `?status=${status}` : '';

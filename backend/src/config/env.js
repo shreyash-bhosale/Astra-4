@@ -33,7 +33,9 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   resendApiKey: process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER_API_KEY || '',
   emailFrom: process.env.EMAIL_FROM || 'ResolveAI Operations <notifications@resolveai.io>',
+  emailReplyTo: process.env.EMAIL_REPLY_TO || 'support@resolveai.io',
   managerNotificationEmail: process.env.MANAGER_NOTIFICATION_EMAIL || 'manager@resolveai.io',
+  emailMode: process.env.EMAIL_MODE || (process.env.RESEND_API_KEY ? 'provider' : 'simulator'),
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
   databaseMode: process.env.DATABASE_MODE || (process.env.NODE_ENV === 'production' && (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ? 'supabase' : 'local')

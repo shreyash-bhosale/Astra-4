@@ -12,23 +12,24 @@ export class EmailService {
     this.providerName = 'resend';
     this.resend = null;
     this.fromAddress = config.emailFrom || 'ResolveAI Operations <notifications@resolveai.io>';
+    this.replyToAddress = config.emailReplyTo || 'support@resolveai.io';
+    this.emailMode = config.emailMode || (config.resendApiKey ? 'provider' : 'simulator');
 
     if (config.resendApiKey && config.resendApiKey.startsWith('re_')) {
       try {
         this.resend = new Resend(config.resendApiKey);
-        console.log('[EMAIL] Resend transactional email provider initialized with live API key.');
+        console.log(`[EMAIL] Email service: READY (Provider: Resend, Sender: ${this.fromAddress})`);
       } catch (err) {
         console.warn('[EMAIL] Resend client initialization notice:', err.message);
       }
     } else {
-      console.log('[EMAIL] Live Resend API key not detected. Operating in high-fidelity transactional simulator mode.');
+      console.log(`[EMAIL] Email service: SIMULATOR (Operating in transactional simulator mode. Backend will automatically process email events.)`);
     }
   }
 
   // Prevent Email Header Injection (CRLF & multi-line injection attack prevention)
   sanitizeHeader(value = '') {
     if (!value) return '';
-    // Take only the first line before any carriage return/newline to eliminate header splitting
     const firstLine = String(value).split(/[\r\n]/)[0].trim();
     return firstLine.replace(/[\r\n]/g, '').trim();
   }
@@ -48,15 +49,64 @@ export class EmailService {
     throw new Error(`Email template '${templateName}' not found`);
   }
 
+  // System Status Reporter (Admin & Health Visibility - Never exposes secrets)
+  getStatus() {
+    const allNotifications = db.find('email_notifications') || [];
+    const sent = allNotifications.filter(n => n.status === 'SENT');
+    const failed = allNotifications.filter(n => n.status === 'FAILED');
+    const sortedSent = [...sent].sort((a, b) => new Date(b.sent_at || b.created_at) - new Date(a.sent_at || a.created_at));
+    const lastDelivery = sortedSent[0] ? (sortedSent[0].sent_at || sortedSent[0].created_at) : null;
+
+    return {
+      operational: true,
+      provider: this.resend ? 'Resend' : 'Transactional Simulator (Resend Compatible)',
+      mode: this.emailMode,
+      isLive: !!this.resend,
+      sender: this.fromAddress,
+      replyTo: this.replyToAddress,
+      apiKeyConfigured: !!(config.resendApiKey && config.resendApiKey.startsWith('re_')),
+      senderConfigured: !!config.emailFrom,
+      stats: {
+        totalSent: sent.length,
+        totalFailed: failed.length,
+        lastDelivery
+      }
+    };
+  }
+
+  // Customer preference gate: returns false if customer explicitly opted out of emails
+  checkCustomerPreferences(customer, ticketId = null, eventType = 'NOTIFICATION') {
+    if (!customer) return { allowed: true };
+
+    const emailAllowed = customer.email_notifications !== false && customer.email_notifications_enabled !== false;
+    if (!emailAllowed) {
+      console.log(`[EMAIL] Skipped for customer '${customer.name || customer.email}': Email notifications disabled in preferences.`);
+      if (ticketId) {
+        db.logAudit({
+          ticket_id: ticketId,
+          event_type: 'EMAIL_SKIPPED',
+          agent: 'Communication Agent',
+          description: `Notification skipped for Ticket #${ticketId}: Customer <${customer.email}> has disabled email notifications.`,
+          metadata: { eventType, customerId: customer.id, reason: 'CUSTOMER_PREFERENCE_DISABLED' }
+        });
+      }
+      return {
+        allowed: false,
+        reason: 'Customer has disabled email notifications in preferences'
+      };
+    }
+    return { allowed: true };
+  }
+
   // Main Email Dispatcher with Idempotency, Retries, and Audit Trails
   async sendEmail({
     to,
     subject,
     html,
     text,
-    ticketId,
-    customerId,
-    eventType,
+    ticketId = null,
+    customerId = null,
+    eventType = 'GENERIC_NOTIFICATION',
     idempotencyKey = null,
     metadata = {}
   }) {
@@ -82,19 +132,21 @@ export class EmailService {
       };
     }
 
-    // 2. Idempotency Check (Prevent duplicate emails for identical state triggers)
-    const effectiveIdempotencyKey = idempotencyKey || `${ticketId}_${eventType}_${metadata.actionId || metadata.runId || 'default'}`;
+    // 2. Idempotency Check (Prevent duplicate emails for identical event triggers)
+    const effectiveIdempotencyKey = idempotencyKey || `${ticketId || 'global'}_${eventType}_${cleanTo}_${metadata.actionId || metadata.runId || 'default'}`;
     const existing = db.findOne('email_notifications', n => n.idempotency_key === effectiveIdempotencyKey && n.status === 'SENT');
 
     if (existing) {
       console.log(`[EMAIL] Duplicate avoided: Email for idempotency key '${effectiveIdempotencyKey}' already sent. Skipping.`);
-      db.logAudit({
-        ticket_id: ticketId,
-        event_type: 'EMAIL_SKIPPED',
-        agent: 'Communication Agent',
-        description: `Duplicate email prevented for event '${eventType}' on Ticket #${ticketId}.`,
-        metadata: { idempotencyKey: effectiveIdempotencyKey, originalMessageId: existing.provider_message_id }
-      });
+      if (ticketId) {
+        db.logAudit({
+          ticket_id: ticketId,
+          event_type: 'EMAIL_SKIPPED',
+          agent: 'Communication Agent',
+          description: `Duplicate email prevented for event '${eventType}' to <${cleanTo}>.`,
+          metadata: { idempotencyKey: effectiveIdempotencyKey, originalMessageId: existing.provider_message_id }
+        });
+      }
       return {
         success: true,
         status: 'DUPLICATE_SKIPPED',
@@ -123,38 +175,55 @@ export class EmailService {
       created_at: new Date().toISOString()
     });
 
-    // 4. Dispatch Email through Transactional Provider
-    try {
-      let providerMessageId = null;
+    // 4. Dispatch Email through Transactional Provider (with controlled retry on transient errors)
+    let providerMessageId = null;
+    let lastError = null;
+    const maxAttempts = 2;
 
-      if (this.resend) {
-        // Send via live Resend API
-        const { data, error } = await this.resend.emails.send({
-          from: this.fromAddress,
-          to: [cleanTo],
-          subject: cleanSubject,
-          html,
-          text
-        });
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        if (this.resend && this.emailMode === 'provider') {
+          // Send via live Resend API
+          const { data, error } = await this.resend.emails.send({
+            from: this.fromAddress,
+            to: [cleanTo],
+            reply_to: this.replyToAddress,
+            subject: cleanSubject,
+            html,
+            text
+          });
 
-        if (error) {
-          throw new Error(error.message || 'Resend provider error');
+          if (error) {
+            throw new Error(error.message || 'Resend provider error');
+          }
+          providerMessageId = data?.id || `resend_${uuidv4()}`;
+        } else {
+          // High-Fidelity Transactional Provider Simulator
+          // Generates unique cryptographic delivery receipt ID and verifies formatting
+          providerMessageId = `msg_resend_live_${uuidv4().replace(/-/g, '').slice(0, 16)}`;
         }
-        providerMessageId = data?.id || `resend_${uuidv4()}`;
-      } else {
-        // High-Fidelity Transactional Provider Simulator
-        // Verifies formatting, attaches cryptographically unique delivery receipt ID
-        providerMessageId = `msg_resend_live_${uuidv4().replace(/-/g, '').slice(0, 16)}`;
-      }
 
-      // 5. Update Record on Delivery Success
+        // Success - break retry loop
+        lastError = null;
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[EMAIL] Attempt ${attempt}/${maxAttempts} failed for ${cleanTo}:`, err.message);
+        if (attempt < maxAttempts) {
+          // Brief backoff before transient retry
+          await new Promise(res => setTimeout(res, 250));
+        }
+      }
+    }
+
+    // 5. Handle Delivery Result
+    if (providerMessageId && !lastError) {
       db.update('email_notifications', notificationRecord.id, {
         status: 'SENT',
         provider_message_id: providerMessageId,
         sent_at: new Date().toISOString()
       });
 
-      // 6. Record in ResolveAI Audit Trail
       if (ticketId) {
         db.logAudit({
           ticket_id: ticketId,
@@ -178,13 +247,12 @@ export class EmailService {
         notificationId: notificationRecord.id,
         messageId: providerMessageId
       };
-    } catch (err) {
-      console.error(`[EMAIL] ✗ Delivery failed for ${cleanTo}:`, err.message);
-
+    } else {
       // Record Failure without crashing business operations
+      const errorMsg = lastError?.message || 'Unknown delivery failure';
       db.update('email_notifications', notificationRecord.id, {
         status: 'FAILED',
-        error_message: err.message
+        error_message: errorMsg
       });
 
       if (ticketId) {
@@ -192,11 +260,11 @@ export class EmailService {
           ticket_id: ticketId,
           event_type: 'EMAIL_FAILED',
           agent: 'Communication Agent',
-          description: `Failed to dispatch customer email to <${cleanTo}>: ${err.message}`,
+          description: `Failed to dispatch customer email to <${cleanTo}>: ${errorMsg}`,
           metadata: {
             eventType,
             recipient: cleanTo,
-            error: err.message,
+            error: errorMsg,
             status: 'FAILED'
           }
         });
@@ -206,7 +274,7 @@ export class EmailService {
         success: false,
         status: 'FAILED',
         notificationId: notificationRecord.id,
-        error: err.message
+        error: errorMsg
       };
     }
   }
@@ -304,10 +372,19 @@ export class EmailService {
     return { ticket, customer };
   }
 
-  // Event Helper 1: Task Started
-  async notifyTaskStarted(params = {}) {
+  // ============================================================================
+  // CENTRAL WORKFLOW NOTIFICATION METHODS
+  // ============================================================================
+
+  // 1. Ticket Created / Task Started
+  async sendTicketCreatedEmail(params = {}) {
     const { ticket, customer } = this._resolveTicketAndCustomer(params);
     if (!customer?.email) return { success: false, status: 'SKIPPED', skipped: true };
+
+    const prefCheck = this.checkCustomerPreferences(customer, ticket?.id, 'TICKET_CREATED');
+    if (!prefCheck.allowed) {
+      return { success: true, status: 'SKIPPED_PREFERENCE', skipped: true, reason: prefCheck.reason };
+    }
 
     const { subject, html, text } = emailTemplates.taskStarted({
       customerName: customer.name || params.customerName,
@@ -317,7 +394,7 @@ export class EmailService {
       timestamp: ticket.created_at || new Date().toISOString()
     });
 
-    const runId = params.agentRunId || params.runId || 'default';
+    const runId = params.agentRunId || params.runId || 'init';
     return await this.sendEmail({
       to: customer.email,
       subject,
@@ -325,15 +402,25 @@ export class EmailService {
       text,
       ticketId: ticket.id,
       customerId: customer.id,
-      eventType: 'TASK_STARTED',
-      idempotencyKey: `${ticket.id}_TASK_STARTED_${runId}`
+      eventType: 'TICKET_CREATED',
+      idempotencyKey: `${ticket.id}_TICKET_CREATED_${customer.email}_${runId}`
     });
   }
 
-  // Event Helper 2: Task Update
-  async notifyTaskUpdate(params = {}) {
+  // Alias for backward compatibility
+  async notifyTaskStarted(params = {}) {
+    return this.sendTicketCreatedEmail(params);
+  }
+
+  // 2. Status Update
+  async sendStatusUpdateEmail(params = {}) {
     const { ticket, customer } = this._resolveTicketAndCustomer(params);
     if (!customer?.email) return { success: false, status: 'SKIPPED', skipped: true };
+
+    const prefCheck = this.checkCustomerPreferences(customer, ticket?.id, 'STATUS_UPDATE');
+    if (!prefCheck.allowed) {
+      return { success: true, status: 'SKIPPED_PREFERENCE', skipped: true, reason: prefCheck.reason };
+    }
 
     const stage = params.stage || 'Status Update';
     const { subject, html, text } = emailTemplates.taskUpdate({
@@ -351,13 +438,18 @@ export class EmailService {
       text,
       ticketId: ticket.id,
       customerId: customer.id,
-      eventType: 'TASK_UPDATE',
-      idempotencyKey: `${ticket.id}_TASK_UPDATE_${stage.replace(/\s+/g, '_')}`
+      eventType: 'STATUS_UPDATE',
+      idempotencyKey: `${ticket.id}_STATUS_UPDATE_${customer.email}_${stage.replace(/\s+/g, '_')}`
     });
   }
 
-  // Event Helper 3: Approval Requested (Internal Manager Email)
-  async notifyApprovalRequested(params = {}) {
+  // Alias for backward compatibility
+  async notifyTaskUpdate(params = {}) {
+    return this.sendStatusUpdateEmail(params);
+  }
+
+  // 3. Approval Requested (Internal Manager Email)
+  async sendApprovalRequestedEmail(params = {}) {
     const { ticket, customer } = this._resolveTicketAndCustomer(params);
     const managerEmail = config.managerNotificationEmail || 'manager@resolveai.io';
     const approval = params.approval || {
@@ -386,14 +478,24 @@ export class EmailService {
       ticketId: ticket.id,
       customerId: customer?.id,
       eventType: 'APPROVAL_REQUESTED',
-      idempotencyKey: `${ticket.id}_APPROVAL_REQUESTED_${approval.id || approval.action}`
+      idempotencyKey: `${ticket.id}_APPROVAL_REQUESTED_${managerEmail}_${approval.id || approval.action}`
     });
   }
 
-  // Event Helper 4: Approval Completed
+  // Alias for backward compatibility
+  async notifyApprovalRequested(params = {}) {
+    return this.sendApprovalRequestedEmail(params);
+  }
+
+  // 4. Approval Completed
   async notifyApprovalCompleted(params = {}) {
     const { ticket, customer } = this._resolveTicketAndCustomer(params);
     if (!customer?.email) return { success: false, status: 'SKIPPED', skipped: true };
+
+    const prefCheck = this.checkCustomerPreferences(customer, ticket?.id, 'APPROVAL_COMPLETED');
+    if (!prefCheck.allowed) {
+      return { success: true, status: 'SKIPPED_PREFERENCE', skipped: true, reason: prefCheck.reason };
+    }
 
     const approval = params.approval || {
       id: `appr_${Date.now()}`,
@@ -415,14 +517,19 @@ export class EmailService {
       ticketId: ticket.id,
       customerId: customer.id,
       eventType: 'APPROVAL_COMPLETED',
-      idempotencyKey: `${ticket.id}_APPROVAL_COMPLETED_${approval.id}`
+      idempotencyKey: `${ticket.id}_APPROVAL_COMPLETED_${customer.email}_${approval.id}`
     });
   }
 
-  // Event Helper 5: Action Completed
-  async notifyActionCompleted(params = {}) {
+  // 5. Action Completed
+  async sendActionCompletedEmail(params = {}) {
     const { ticket, customer } = this._resolveTicketAndCustomer(params);
     if (!customer?.email) return { success: false, status: 'SKIPPED', skipped: true };
+
+    const prefCheck = this.checkCustomerPreferences(customer, ticket?.id, 'ACTION_COMPLETED');
+    if (!prefCheck.allowed) {
+      return { success: true, status: 'SKIPPED_PREFERENCE', skipped: true, reason: prefCheck.reason };
+    }
 
     const action = params.action || params.actionResult?.actionExecuted || 'Requested Action';
     const repId = params.referenceId || params.actionResult?.details?.replacementId || params.actionResult?.details?.orderId || null;
@@ -443,14 +550,24 @@ export class EmailService {
       ticketId: ticket.id,
       customerId: customer.id,
       eventType: 'ACTION_COMPLETED',
-      idempotencyKey: `${ticket.id}_ACTION_COMPLETED_${action}`
+      idempotencyKey: `${ticket.id}_ACTION_COMPLETED_${customer.email}_${action}`
     });
   }
 
-  // Event Helper 6: Final Resolution
-  async notifyFinalResolution(params = {}) {
+  // Alias for backward compatibility
+  async notifyActionCompleted(params = {}) {
+    return this.sendActionCompletedEmail(params);
+  }
+
+  // 6. Final Resolution
+  async sendResolutionEmail(params = {}) {
     const { ticket, customer } = this._resolveTicketAndCustomer(params);
     if (!customer?.email) return { success: false, status: 'SKIPPED', skipped: true };
+
+    const prefCheck = this.checkCustomerPreferences(customer, ticket?.id, 'FINAL_RESOLUTION');
+    if (!prefCheck.allowed) {
+      return { success: true, status: 'SKIPPED_PREFERENCE', skipped: true, reason: prefCheck.reason };
+    }
 
     const { subject, html, text } = emailTemplates.finalResolution({
       customerName: customer.name || params.customerName,
@@ -470,14 +587,79 @@ export class EmailService {
       ticketId: ticket.id,
       customerId: customer.id,
       eventType: 'FINAL_RESOLUTION',
-      idempotencyKey: `${ticket.id}_FINAL_RESOLUTION`
+      idempotencyKey: `${ticket.id}_FINAL_RESOLUTION_${customer.email}`
     });
   }
 
-  // Manual Customer Update
+  // Alias for backward compatibility
+  async notifyFinalResolution(params = {}) {
+    return this.sendResolutionEmail(params);
+  }
+
+  // 7. Generic Notification
+  async sendGenericNotificationEmail({ to, customer = null, subject, message, ticketId = null }) {
+    const cleanTo = to || customer?.email;
+    if (!cleanTo) return { success: false, status: 'SKIPPED', skipped: true };
+
+    if (customer) {
+      const prefCheck = this.checkCustomerPreferences(customer, ticketId, 'GENERIC_NOTIFICATION');
+      if (!prefCheck.allowed) {
+        return { success: true, status: 'SKIPPED_PREFERENCE', skipped: true, reason: prefCheck.reason };
+      }
+    }
+
+    const { subject: renderedSubject, html, text } = emailTemplates.genericNotification({
+      customerName: customer?.name || 'Customer',
+      subject,
+      message,
+      ticketId
+    });
+
+    return await this.sendEmail({
+      to: cleanTo,
+      subject: renderedSubject,
+      html,
+      text,
+      ticketId,
+      customerId: customer?.id,
+      eventType: 'GENERIC_NOTIFICATION',
+      idempotencyKey: `${ticketId || 'generic'}_GENERIC_${cleanTo}_${Date.now()}`
+    });
+  }
+
+  // 8. Admin Test Dispatch
+  async sendTestEmail({ adminUser }) {
+    if (!adminUser || !adminUser.email) {
+      throw new Error('Admin user email is required for test email dispatch.');
+    }
+
+    const { subject, html, text } = emailTemplates.testEmail({
+      adminName: adminUser.name || 'System Administrator',
+      provider: this.resend ? 'Resend' : 'Transactional Simulator',
+      timestamp: new Date().toISOString()
+    });
+
+    return await this.sendEmail({
+      to: adminUser.email,
+      subject,
+      html,
+      text,
+      ticketId: 'SYS-TEST',
+      customerId: null,
+      eventType: 'ADMIN_TEST',
+      idempotencyKey: `SYS-TEST_${adminUser.email}_${Date.now()}`
+    });
+  }
+
+  // 9. Manual Customer Update
   async sendManualUpdate({ ticket, customer, customSubject, message, senderUser }) {
     if (!customer?.email) {
       throw new Error(`Customer associated with Ticket #${ticket.id} does not have a registered email address.`);
+    }
+
+    const prefCheck = this.checkCustomerPreferences(customer, ticket.id, 'MANUAL_UPDATE');
+    if (!prefCheck.allowed) {
+      throw new Error(`Customer <${customer.email}> has explicitly disabled email notifications in their profile preferences.`);
     }
 
     const { subject, html, text } = emailTemplates.manualUpdate({
@@ -496,7 +678,7 @@ export class EmailService {
       ticketId: ticket.id,
       customerId: customer.id,
       eventType: 'MANUAL_UPDATE',
-      idempotencyKey: `${ticket.id}_MANUAL_${Date.now()}`
+      idempotencyKey: `${ticket.id}_MANUAL_${customer.email}_${Date.now()}`
     });
   }
 

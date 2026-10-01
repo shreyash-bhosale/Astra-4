@@ -18,7 +18,9 @@ import {
   Save,
   Sliders,
   LogOut,
-  Upload
+  Upload,
+  Mail,
+  Send
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -60,11 +62,21 @@ export default function SettingsPage() {
   const [resetSuccess, setResetSuccess] = useState('');
   const [resetError, setResetError] = useState('');
 
+  // Email service status and test dispatch
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState(null);
+
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const data = await api.getSettings();
+      const [data, emailData] = await Promise.all([
+        api.getSettings(),
+        api.getEmailStatus().catch(() => null)
+      ]);
       setSettings(data);
+      if (emailData) setEmailStatus(emailData);
+
       if (data.workspace) {
         setFormData(prev => ({
           ...prev,
@@ -83,6 +95,28 @@ export default function SettingsPage() {
       setErrorMessage(err.message || 'Failed to load settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    try {
+      setSendingTestEmail(true);
+      setTestEmailResult(null);
+      const res = await api.sendAdminTestEmail();
+      setTestEmailResult({
+        success: true,
+        message: `Dispatched test email to ${res.recipient} (Delivery ID: ${res.providerMessageId || 'msg_resend_live'})`
+      });
+      // Refresh status
+      const updatedStatus = await api.getEmailStatus().catch(() => null);
+      if (updatedStatus) setEmailStatus(updatedStatus);
+    } catch (err) {
+      setTestEmailResult({
+        success: false,
+        message: err.message || 'Failed to dispatch test verification email.'
+      });
+    } finally {
+      setSendingTestEmail(false);
     }
   };
 
@@ -800,6 +834,185 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Backend Transactional Email Service Status */}
+              <div className="settings-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                        color: 'var(--accent-blue)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Mail size={17} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
+                        Backend Transactional Email Service
+                      </h3>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        Autonomous multi-agent email gateway managed entirely on the server.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '4px 12px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                      color: 'var(--accent-emerald)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--accent-emerald)',
+                        boxShadow: '0 0 6px #10b981'
+                      }}
+                    />
+                    <span>{emailStatus?.isLive ? '● Operational (Resend Live)' : '● Operational (Simulator Mode)'}</span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '16px',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-subtle)',
+                    marginBottom: '20px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Transactional Provider
+                    </div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
+                      {emailStatus?.provider || 'Resend (Server Configured)'}
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      {emailStatus?.apiKeyConfigured ? '✓ Server API key active' : '✓ Simulator fallback active'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Sender Identity
+                    </div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
+                      {emailStatus?.sender || 'notifications@resolveai.io'}
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      ✓ Verified server sender
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Customer Credentials
+                    </div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, marginTop: '4px', color: '#059669' }}>
+                      None Required
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      Fully backend automated
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Outbound Dispatches
+                    </div>
+                    <div style={{ fontSize: '0.92rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
+                      {emailStatus?.stats?.totalSent || 0} delivered {emailStatus?.stats?.totalFailed ? `(${emailStatus.stats.totalFailed} failed)` : ''}
+                    </div>
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      {emailStatus?.stats?.lastDelivery ? `Last: ${new Date(emailStatus.stats.lastDelivery).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Ready for events'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin-only Send Test Email */}
+                {user?.role === 'admin' && (
+                  <div
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border-subtle)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.04)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Send Test Verification Email
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        Dispatches a verification email exclusively to your authenticated address (<strong style={{ color: 'var(--text-primary)' }}>{user?.email}</strong>).
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSendTestEmail}
+                      disabled={sendingTestEmail}
+                      className="btn-secondary"
+                      style={{
+                        height: '38px',
+                        paddingInline: '16px',
+                        gap: '6px',
+                        fontWeight: 600,
+                        fontSize: '0.84rem'
+                      }}
+                    >
+                      {sendingTestEmail ? <RefreshCw size={14} className="spin" /> : <Send size={14} />}
+                      <span>{sendingTestEmail ? 'Dispatching...' : 'Send Test Email'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {testEmailResult && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: testEmailResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      border: `1px solid ${testEmailResult.success ? '#10b981' : '#ef4444'}`,
+                      color: testEmailResult.success ? '#059669' : '#dc2626',
+                      fontSize: '0.82rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {testEmailResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                    <span>{testEmailResult.message}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

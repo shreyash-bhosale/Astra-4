@@ -92,5 +92,6 @@ app.listen(PORT, () => {
   console.log(`⚡ ResolveAI Backend Server running on port ${PORT}`);
   console.log(`⚡ Health Check: http://localhost:${PORT}/api/health`);
   console.log(`⚡ Gemini Model: ${config.geminiModel} (${config.geminiApiKey ? 'API Key Active' : 'Fallback Mode'})`);
+  console.log(`⚡ Email Service: ${config.resendApiKey && config.resendApiKey.startsWith('re_') ? 'READY (Provider: Resend)' : 'READY (Transactional Simulator Mode)'}`);
   console.log(`======================================================\n`);
 });

@@ -1,6 +1,7 @@
 import { db } from '../db/store.js';
 import { CreateTicketSchema, UpdateTicketSchema } from '../validators/index.js';
 import { orchestratorAgent } from '../agents/orchestrator.js';
+import { emailService } from '../services/emailService.js';
 
 export const listTickets = async (req, res, next) => {
   try {
@@ -99,6 +100,20 @@ export const createTicket = async (req, res, next) => {
       metadata: { title: ticket.title, priority: ticket.priority }
     });
 
+    // Auto-dispatch confirmation email to customer on record if associated
+    if (ticket.customer_id) {
+      const customer = db.findById('customers', ticket.customer_id);
+      if (customer && customer.email) {
+        emailService.sendTicketCreatedEmail({
+          ticket,
+          customer,
+          issueSummary: ticket.description || ticket.title
+        }).catch(err => {
+          console.warn('[EMAIL] Automated ticket creation email notice:', err.message);
+        });
+      }
+    }
+
     return res.status(201).json(ticket);
   } catch (err) {
     next(err);
@@ -124,6 +139,21 @@ export const updateTicket = async (req, res, next) => {
       description: `Ticket properties updated: ${Object.keys(validated).join(', ')}`,
       metadata: validated
     });
+
+    // Auto-dispatch status update email if ticket status transitioned
+    if (validated.status && validated.status !== existing.status) {
+      const customer = updated.customer_id ? db.findById('customers', updated.customer_id) : null;
+      if (customer && customer.email) {
+        emailService.sendStatusUpdateEmail({
+          ticket: updated,
+          customer,
+          stage: `Status Transition: ${existing.status} → ${updated.status}`,
+          message: `Your support case #${updated.id} status has been updated to "${updated.status}".`
+        }).catch(err => {
+          console.warn('[EMAIL] Ticket status transition email notice:', err.message);
+        });
+      }
+    }
 
     return res.json(updated);
   } catch (err) {

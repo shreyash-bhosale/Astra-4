@@ -117,7 +117,7 @@ export default function CustomerProfilePage() {
           Profile & Preferences
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-          Manage your credentials, phone, AI voice update preferences, and security settings.
+          Manage your contact details, notification preferences, and account security.
         </p>
       </div>
 
@@ -341,38 +341,57 @@ export default function CustomerProfilePage() {
 
           {/* Notification Preferences */}
           <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '14px' }}>
-              Standard Notifications
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
+                  Email Notifications
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  ResolveAI sends important updates to: <strong style={{ color: 'var(--text-primary)' }}>{profile?.email || user?.email}</strong>
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  padding: '3px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  backgroundColor: emailNotifs ? '#ecfdf5' : 'var(--bg-tertiary)',
+                  color: emailNotifs ? '#059669' : 'var(--text-muted)'
+                }}
+              >
+                {emailNotifs ? '✓ Enabled' : 'Disabled'}
+              </span>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
                 <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Email Case Updates</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Receive transactional emails on triage and investigation milestones
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>Case Lifecycle & Status Updates</div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                    Receive transactional emails on case receipt, triage, replacement execution, and resolution milestones
                   </div>
                 </div>
                 <input
                   type="checkbox"
                   checked={emailNotifs}
                   onChange={(e) => setEmailNotifs(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 />
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
                 <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Resolution Confirmation</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Immediate alert when replacement tracking or verified resolution is confirmed
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>Resolution & Tracking Confirmations</div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                    Immediate alert when fulfillment carrier tracking or verified resolution is confirmed
                   </div>
                 </div>
                 <input
                   type="checkbox"
                   checked={resolutionAlerts}
                   onChange={(e) => setResolutionAlerts(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 />
               </label>
             </div>

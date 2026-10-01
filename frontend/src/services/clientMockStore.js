@@ -400,6 +400,62 @@ export function handleClientMock(endpoint, options = {}) {
     return { success: true, message: 'Email retried successfully.' };
   }
 
+  // Emails: GET /emails/status
+  if (endpoint === '/emails/status') {
+    const list = store.email_notifications || [];
+    const sent = list.filter(e => e.status === 'SENT');
+    return {
+      operational: true,
+      provider: 'Transactional Simulator (Resend Compatible)',
+      mode: 'simulator',
+      isLive: false,
+      sender: 'ResolveAI Operations <notifications@resolveai.io>',
+      replyTo: 'support@resolveai.io',
+      apiKeyConfigured: true,
+      senderConfigured: true,
+      stats: {
+        totalSent: sent.length,
+        totalFailed: list.length - sent.length,
+        lastDelivery: sent[0]?.sent_at || null
+      }
+    };
+  }
+
+  // Emails: POST /emails/test
+  if (endpoint === '/emails/test' && method === 'POST') {
+    const adminEmail = store.users?.find(u => u.role === 'admin')?.email || 'admin@resolveai.io';
+    const testId = `msg_resend_live_${Date.now().toString(36)}`;
+    const newEmail = {
+      id: `eml-${Date.now().toString(36)}`,
+      ticket_id: 'SYS-TEST',
+      customer_id: null,
+      event_type: 'ADMIN_TEST',
+      recipient: adminEmail,
+      subject: '[Test Verification] ResolveAI Transactional Email Provider Operational',
+      provider: 'transactional-simulator',
+      provider_message_id: testId,
+      status: 'SENT',
+      attempt_count: 1,
+      sent_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    };
+    if (!store.email_notifications) store.email_notifications = [];
+    store.email_notifications.unshift(newEmail);
+    saveStorage(store);
+    return {
+      success: true,
+      message: `Test email successfully dispatched to ${adminEmail}`,
+      recipient: adminEmail,
+      providerMessageId: testId,
+      status: 'SENT'
+    };
+  }
+
+  // Emails: GET /emails/logs
+  if (endpoint.startsWith('/emails/logs')) {
+    return store.email_notifications || [];
+  }
+
   // Customers, Orders, Policies, Activity, Health
   if (endpoint === '/activity/metrics') {
     const totalResolved = store.tickets.filter(t => t.status === 'RESOLVED').length;

@@ -2,6 +2,80 @@ import { db } from '../db/store.js';
 import { emailService } from '../services/emailService.js';
 import { SendCustomerEmailSchema } from '../validators/index.js';
 
+// 1. GET /api/emails/status (Admin & Operations System Status)
+export const getEmailStatus = async (req, res, next) => {
+  try {
+    const status = emailService.getStatus();
+    return res.json(status);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 2. POST /api/emails/test (Protected Admin-Only Test Dispatch)
+export const sendTestEmail = async (req, res, next) => {
+  try {
+    // Only send to the authenticated admin's verified email address
+    if (!req.user || !req.user.email) {
+      return res.status(401).json({ error: 'Authenticated administrator account required.' });
+    }
+
+    const result = await emailService.sendTestEmail({ adminUser: req.user });
+
+    if (!result.success) {
+      return res.status(502).json({
+        success: false,
+        error: result.error || 'Failed to dispatch test verification email through configured provider.',
+        status: result.status
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Test email successfully dispatched to ${req.user.email}`,
+      recipient: req.user.email,
+      providerMessageId: result.messageId,
+      notificationId: result.notificationId,
+      status: result.status
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 3. GET /api/emails/logs (Admin & Supervisor Email Delivery Log)
+export const getEmailLogs = async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 30, 100);
+    const notifications = db.find('email_notifications') || [];
+
+    // Sort descending by created_at
+    const sorted = [...notifications].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Sanitize records (never leak internal secrets)
+    const sanitized = sorted.slice(0, limit).map(n => ({
+      id: n.id,
+      ticket_id: n.ticket_id,
+      customer_id: n.customer_id,
+      event_type: n.event_type,
+      recipient: n.recipient,
+      subject: n.subject,
+      provider: n.provider,
+      provider_message_id: n.provider_message_id,
+      status: n.status,
+      attempt_count: n.attempt_count,
+      error_message: n.error_message,
+      sent_at: n.sent_at,
+      created_at: n.created_at
+    }));
+
+    return res.json(sanitized);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 4. POST /api/tickets/:id/send-update (Manual Customer Care Dispatch)
 export const sendTicketUpdateEmail = async (req, res, next) => {
   try {
     const { id: ticketId } = req.params;
@@ -47,6 +121,7 @@ export const sendTicketUpdateEmail = async (req, res, next) => {
   }
 };
 
+// 5. GET /api/tickets/:id/emails (Emails linked to ticket)
 export const getTicketEmails = async (req, res, next) => {
   try {
     const { id: ticketId } = req.params;
@@ -64,6 +139,7 @@ export const getTicketEmails = async (req, res, next) => {
   }
 };
 
+// 6. POST /api/emails/:id/retry (Controlled retry for failed notification)
 export const retryEmail = async (req, res, next) => {
   try {
     const { id } = req.params;

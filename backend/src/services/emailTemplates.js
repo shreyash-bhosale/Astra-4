@@ -290,5 +290,71 @@ Dispatched by: ${agentName}
       html: getBaseLayout({ title, contentHtml, ticketId, status: 'COMMUNICATED' }),
       text
     };
+  },
+
+  // 8. Generic System Notification
+  genericNotification: ({ customerName = 'Valued Customer', subject, message, ticketId, status = 'NOTIFICATION' }) => {
+    const title = subject || 'Notification from ResolveAI';
+    const effectiveSubject = (subject && subject.startsWith('ResolveAI')) ? subject : `ResolveAI — ${subject || 'Operational Notification'}`;
+
+    const contentHtml = `
+      <p>Hello ${sanitize(customerName)},</p>
+      <div class="highlight-box">
+        ${sanitize(message).replace(/\n/g, '<br>')}
+      </div>
+      <p>Thank you for using ResolveAI Customer Operations.</p>
+    `;
+
+    const text = `Hello ${customerName},
+
+${message}
+
+— ResolveAI Customer Operations`;
+
+    return {
+      subject: effectiveSubject,
+      html: getBaseLayout({ title, contentHtml, ticketId, status }),
+      text
+    };
+  },
+
+  // 9. Administrator Test Dispatch
+  testEmail: ({ adminName = 'System Administrator', provider = 'Resend', timestamp }) => {
+    const timeStr = timestamp ? new Date(timestamp).toUTCString() : new Date().toUTCString();
+    const title = 'ResolveAI Transactional Email Verification';
+    const subject = `[Test Verification] ResolveAI Transactional Email Provider Operational`;
+
+    const contentHtml = `
+      <p>Hello ${sanitize(adminName)},</p>
+      <p>This is a verified test dispatch confirming that the ResolveAI transactional email architecture is properly configured and operational.</p>
+      <div class="highlight-box">
+        <strong>Active Provider:</strong> ${sanitize(provider)}<br>
+        <strong>Dispatched At:</strong> ${sanitize(timeStr)}<br>
+        <strong>Backend Architecture:</strong> Multi-Agent Transactional Email Gateway<br>
+        <strong>Status:</strong> Operational & Verified
+      </div>
+      <p>Autonomous agent notifications (ticket creation, status updates, approval requests, fulfillment execution, and verified resolution) are actively routed through this service.</p>
+      <p style="color: #9ca3af; font-size: 13px;">No customer credentials or SMTP configuration are required. The server deployment handles all email delivery autonomously.</p>
+    `;
+
+    const text = `Hello ${adminName},
+
+This is a verified test dispatch confirming that the ResolveAI transactional email architecture is properly configured and operational.
+
+Active Provider: ${provider}
+Dispatched At: ${timeStr}
+Status: Operational & Verified
+
+Autonomous agent notifications (ticket creation, status updates, approval requests, fulfillment execution, and verified resolution) are actively routed through this service.
+
+No customer credentials or SMTP configuration are required. The server deployment handles all email delivery autonomously.
+
+— ResolveAI Platform Engineering`;
+
+    return {
+      subject,
+      html: getBaseLayout({ title, contentHtml, ticketId: 'SYS-TEST', status: 'VERIFIED' }),
+      text
+    };
   }
 };

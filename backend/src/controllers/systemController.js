@@ -9,7 +9,9 @@ export const getHealth = (req, res) => {
     version: '1.0.0',
     geminiConfigured: !!config.geminiApiKey,
     geminiModel: config.geminiModel,
-    supabaseConfigured: !!config.supabaseUrl
+    supabaseConfigured: !!config.supabaseUrl,
+    emailServiceConfigured: !!(config.resendApiKey && config.resendApiKey.startsWith('re_')),
+    emailProvider: (config.resendApiKey && config.resendApiKey.startsWith('re_')) ? 'resend' : 'simulator'
   });
 };
 
