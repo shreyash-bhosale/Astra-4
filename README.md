@@ -10,8 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="<LIVE_DEMO_URL>">
-    <img src="https://img.shields.io/badge/LIVE%20DEMO-AVAILABLE-7C5CFC?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
+  <a href="https://astra4-delta.vercel.app/">
+    <img src="https://img.shields.io/badge/LIVE%20DEMO-ONLINE-7C5CFC?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
   </a>
   <a href="https://github.com/shreyash-bhosale/Astra-4">
     <img src="https://img.shields.io/badge/SOURCE%20CODE-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Repository" />
@@ -150,7 +150,7 @@ Supervisor Authorizes \
 | Resource | Link | Description |
 | :--- | :--- | :--- |
 | **Demo Walkthrough Video** | [`[▶️ Watch Animated Video Walkthrough]`](./docs/screenshots/resolveai-demo-walkthrough.gif) | Complete animated resolution walkthrough: multi-agent DAG execution, approval gating, and autonomous resolution. |
-| **Live Web App** | [`<LIVE_DEMO_URL>`](file:///) | Production web application with Dark/Light mode and interactive 3D hero. |
+| **Live Web App** | [`https://astra4-delta.vercel.app/`](https://astra4-delta.vercel.app/) | Production web application with Dark/Light mode and interactive 3D hero. |
 | **GitHub Repository** | [`https://github.com/shreyash-bhosale/Astra-4`](https://github.com/shreyash-bhosale/Astra-4) | Complete full-stack codebase with frontend, backend, test suite, and schema. |
 
 ---

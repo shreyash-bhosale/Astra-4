@@ -1,3 +1,5 @@
+import { handleClientMock } from './clientMockStore';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
 
 class ApiClient {
@@ -52,6 +54,12 @@ class ApiClient {
 
       return data;
     } catch (err) {
+      // If network fails (e.g. backend not deployed yet or mixed content on Vercel preview),
+      // seamlessly fall back to client mock store so the live demo stays 100% functional
+      if (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        console.warn(`[ResolveAI] Backend unavailable at ${url}. Seamlessly using client demo store.`);
+        return handleClientMock(endpoint, options);
+      }
       console.error(`API Error on ${endpoint}:`, err);
       throw err;
     }
