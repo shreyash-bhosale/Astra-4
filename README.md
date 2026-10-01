@@ -947,6 +947,9 @@ Follow this fast, foolproof 3-minute evaluation walkthrough:
 ---
 
 ## 👥 License & Team
+## 📄 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 ## 👥 Team — Astra-4
 
