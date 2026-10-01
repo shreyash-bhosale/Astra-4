@@ -25,11 +25,12 @@
 </p>
 
 <p align="center">
-  <img src="./docs/screenshots/dashboard_overview.png" alt="ResolveAI Operations Dashboard & Multi-Agent Fleet Overview" width="95%" />
+  <img src="./docs/screenshots/landing_page_hero.png" alt="ResolveAI - From Issue to Resolution. Autonomously." width="95%" />
 </p>
 
 <p align="center">
-  <em>ResolveAI Operations Dashboard: Real-time multi-agent fleet telemetry, case management, and governance queue.</em>
+  <em><strong>From Issue to Resolution. Autonomously.</strong><br/>
+  ResolveAI understands customer issues, investigates context, evaluates policy, coordinates actions, communicates updates, and verifies the final outcome — with human approval when required.</em>
 </p>
 
 <p align="center">
@@ -78,6 +79,8 @@
 ---
 
 ## ⚡ What is ResolveAI?
+
+> **"ResolveAI understands customer issues, investigates context, evaluates policy, coordinates actions, communicates updates, and verifies the final outcome — with human approval when required."**
 
 **ResolveAI** is an **autonomous agentic customer operations platform** designed to transform unstructured support tickets into verified, policy-compliant resolutions. 
 
