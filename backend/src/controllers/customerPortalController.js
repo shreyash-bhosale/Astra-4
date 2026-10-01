@@ -514,3 +514,67 @@ Respond directly to the customer in 2 to 4 concise sentences:`;
     next(err);
   }
 };
+
+// 8. PATCH /api/customer/preferences
+export const updateCustomerPreferences = async (req, res, next) => {
+  try {
+    const customer = resolveCustomerFromUser(req.user);
+    const {
+      name,
+      phone,
+      voice_updates_enabled,
+      voice_update_frequency,
+      voice_call_start,
+      voice_call_end,
+      timezone,
+      email_notifications,
+      resolution_alerts
+    } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name.trim();
+    if (phone !== undefined) updates.phone = phone ? phone.trim() : null;
+    if (voice_updates_enabled !== undefined) updates.voice_updates_enabled = Boolean(voice_updates_enabled);
+    if (voice_update_frequency !== undefined) updates.voice_update_frequency = voice_update_frequency;
+    if (voice_call_start !== undefined) updates.voice_call_start = voice_call_start;
+    if (voice_call_end !== undefined) updates.voice_call_end = voice_call_end;
+    if (timezone !== undefined) updates.timezone = timezone;
+    if (email_notifications !== undefined) updates.email_notifications = Boolean(email_notifications);
+    if (resolution_alerts !== undefined) updates.resolution_alerts = Boolean(resolution_alerts);
+
+    const updatedCustomer = db.update('customers', customer.id, updates);
+
+    // Sync user record if authenticated
+    if (req.user?.id) {
+      db.update('users', req.user.id, updates);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Preferences updated successfully.',
+      customer: updatedCustomer
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 9. DELETE /api/customer/account
+export const deleteCustomerAccount = async (req, res, next) => {
+  try {
+    const customer = resolveCustomerFromUser(req.user);
+
+    db.remove('customers', customer.id);
+    if (req.user?.id) {
+      db.remove('users', req.user.id);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Account deleted successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

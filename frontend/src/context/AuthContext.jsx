@@ -170,16 +170,17 @@ export const AuthProvider = ({ children }) => {
     return await login(email, 'password123');
   };
 
-  const register = async (name, email, password, role = 'agent') => {
+  const register = async (name, email, password, phone = '') => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Call backend registration endpoint to create user and auto-confirm in Supabase
+    // 1. Call backend registration endpoint to create user, profile, and auto-confirm in Supabase
     try {
       await api.register({
         name: name.trim(),
         email: cleanEmail,
+        phone: phone.trim(),
         password,
-        role
+        role: 'customer' // Strict customer role
       });
     } catch (regErr) {
       throw new Error(mapAuthError(regErr));
@@ -204,6 +205,14 @@ export const AuthProvider = ({ children }) => {
     return await login(cleanEmail, password);
   };
 
+  const forgotPassword = async (email) => {
+    return await api.forgotPassword(email.trim().toLowerCase());
+  };
+
+  const resetPassword = async (data) => {
+    return await api.resetPassword(data);
+  };
+
   const logout = async () => {
     try {
       if (isSupabaseConfigured() && supabase) {
@@ -218,7 +227,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithDemo, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithDemo, register, forgotPassword, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

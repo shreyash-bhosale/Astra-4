@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { db } from '../db/store.js';
 import { config } from '../config/env.js';
 import { getSupabaseClient } from '../db/supabaseClient.js';
-import { RegisterSchema, LoginSchema } from '../validators/index.js';
+import { RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema } from '../validators/index.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -12,8 +12,12 @@ export const register = async (req, res, next) => {
     const existing = db.findOne('users', u => u.email.toLowerCase() === emailLower);
 
     if (existing) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+      return res.status(400).json({ error: 'An account with this email already exists.' });
     }
+
+    // STRICT SECURITY: Public registration ALWAYS assigns role = 'customer'
+    // Ignores/overrides any client-supplied role (prevents admin/manager privilege escalation)
+    const assignedRole = 'customer';
 
     const salt = bcrypt.genSaltSync(10);
     const password_hash = bcrypt.hashSync(validated.password, salt);
@@ -29,13 +33,14 @@ export const register = async (req, res, next) => {
           email_confirm: true,
           user_metadata: {
             name: validated.name,
-            role: validated.role
+            phone: validated.phone || '',
+            role: assignedRole
           }
         });
 
         if (supaErr) {
           if (supaErr.message?.includes('already registered') || supaErr.message?.includes('already been registered')) {
-            return res.status(400).json({ error: 'User already exists with this email' });
+            return res.status(400).json({ error: 'An account with this email already exists.' });
           }
           console.warn('[AUTH] Supabase admin.createUser notice:', supaErr.message);
         } else if (supaUser?.user) {
@@ -51,12 +56,34 @@ export const register = async (req, res, next) => {
       ...(userId ? { id: userId } : {}),
       name: validated.name,
       email: emailLower,
+      phone: validated.phone || null,
       password_hash,
-      role: validated.role
+      role: assignedRole,
+      voice_updates_enabled: false,
+      voice_update_frequency: 'important',
+      voice_call_start: '09:00',
+      voice_call_end: '21:00',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      created_at: new Date().toISOString()
     });
 
+    // 3. Automatically link / initialize customer record in CRM table
+    let customer = db.findOne('customers', c => c.email.toLowerCase() === emailLower);
+    if (!customer) {
+      customer = db.insert('customers', {
+        id: `cust-${Date.now().toString(36)}`,
+        name: validated.name,
+        email: emailLower,
+        phone: validated.phone || null,
+        tier: 'Standard',
+        company: 'Individual Consumer',
+        voice_updates_enabled: false,
+        created_at: new Date().toISOString()
+      });
+    }
+
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, role: newUser.role },
+      { id: newUser.id, email: newUser.email, role: newUser.role, customerId: customer.id },
       config.jwtSecret,
       { expiresIn: '7d' }
     );
@@ -66,7 +93,10 @@ export const register = async (req, res, next) => {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        phone: newUser.phone,
+        role: newUser.role,
+        customerId: customer.id,
+        voice_updates_enabled: false
       },
       token,
       supabaseUserId: userId
@@ -167,3 +197,68 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res) => {
   return res.json({ user: req.user });
 };
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const validated = ForgotPasswordSchema.parse(req.body);
+    const emailLower = validated.email.toLowerCase().trim();
+
+    // Check if user exists
+    const user = db.findOne('users', u => u.email.toLowerCase() === emailLower);
+
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.auth.resetPasswordForEmail(emailLower, {
+          redirectTo: `${req.protocol}://${req.get('host')}/reset-password`
+        });
+      } catch (supaErr) {
+        console.warn('[AUTH] Supabase resetPassword notice:', supaErr.message);
+      }
+    }
+
+    // Always return generic success to prevent account enumeration
+    return res.json({
+      success: true,
+      message: 'If an account exists with this email address, a password reset link has been dispatched.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const validated = ResetPasswordSchema.parse(req.body);
+    const emailLower = validated.email.toLowerCase().trim();
+
+    const user = db.findOne('users', u => u.email.toLowerCase() === emailLower);
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired password reset request.' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const password_hash = bcrypt.hashSync(validated.password, salt);
+
+    db.update('users', user.id, { password_hash });
+
+    const supabase = getSupabaseClient();
+    if (supabase && user.id) {
+      try {
+        await supabase.auth.admin.updateUserById(user.id, {
+          password: validated.password
+        });
+      } catch (supaErr) {
+        console.warn('[AUTH] Supabase password update notice:', supaErr.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Password successfully updated. You may now sign in with your new credentials.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

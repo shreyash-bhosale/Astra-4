@@ -4,8 +4,30 @@ import { z } from 'zod';
 export const RegisterSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
+  phone: z.string().optional().default(''),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['agent', 'manager', 'admin']).default('agent')
+  role: z.string().optional() // Ignored on registration and enforced as customer server-side
+});
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address')
+});
+
+export const ResetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  token: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters')
+});
+
+export const CustomerPreferencesSchema = z.object({
+  phone: z.string().optional(),
+  voice_updates_enabled: z.boolean().optional(),
+  voice_update_frequency: z.enum(['important', 'all']).optional(),
+  voice_call_start: z.string().optional(),
+  voice_call_end: z.string().optional(),
+  timezone: z.string().optional(),
+  email_notifications: z.boolean().optional(),
+  resolution_alerts: z.boolean().optional()
 });
 
 export const LoginSchema = z.object({

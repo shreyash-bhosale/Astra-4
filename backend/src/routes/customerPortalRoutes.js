@@ -8,13 +8,17 @@ import {
   getCustomerTicketTimeline,
   getCustomerOrders,
   getCustomerNotifications,
-  customerChat
+  customerChat,
+  updateCustomerPreferences,
+  deleteCustomerAccount
 } from '../controllers/customerPortalController.js';
 
 const router = Router();
 
 // Customer Portal Endpoints (Scoped strictly to authenticated customer)
 router.get('/me', requireAuth, getCustomerProfile);
+router.patch('/preferences', requireAuth, updateCustomerPreferences);
+router.delete('/account', requireAuth, deleteCustomerAccount);
 router.get('/tickets', requireAuth, getCustomerTickets);
 router.post('/tickets', requireAuth, createCustomerTicket);
 router.get('/tickets/:id', requireAuth, getCustomerTicketById);

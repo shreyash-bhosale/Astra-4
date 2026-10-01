@@ -89,6 +89,20 @@ class ApiClient {
     });
   }
 
+  forgotPassword(email) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  }
+
+  resetPassword(data) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
   getMe() {
     return this.request('/auth/me');
   }
@@ -238,6 +252,19 @@ class ApiClient {
     return this.request('/customer/chat', {
       method: 'POST',
       body: JSON.stringify({ message })
+    });
+  }
+
+  updateCustomerPreferences(preferences) {
+    return this.request('/customer/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(preferences)
+    });
+  }
+
+  deleteCustomerAccount() {
+    return this.request('/customer/account', {
+      method: 'DELETE'
     });
   }
 

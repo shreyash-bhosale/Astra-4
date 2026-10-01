@@ -12,17 +12,23 @@ export default function LoginPage() {
   const { login, loginWithDemo } = useAuth();
   const navigate = useNavigate();
 
+  const getSafeRedirect = (userRole) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirect = searchParams.get('redirect');
+    // Safe redirect validation: must start with / and not // (prevent open redirect)
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      return redirect;
+    }
+    return userRole === 'customer' ? '/customer' : '/dashboard';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       const loggedUser = await login(email, password);
-      if (loggedUser?.role === 'customer') {
-        navigate('/customer');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate(getSafeRedirect(loggedUser?.role));
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -35,11 +41,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const loggedUser = await loginWithDemo(role);
-      if (role === 'customer' || loggedUser?.role === 'customer') {
-        navigate('/customer');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate(getSafeRedirect(role || loggedUser?.role));
     } catch (err) {
       setError(err.message || 'Demo login failed');
     } finally {
@@ -229,9 +231,14 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-              Password
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Password
+              </label>
+              <Link to="/forgot-password" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textDecoration: 'none' }}>
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               value={password}
@@ -261,9 +268,9 @@ export default function LoginPage() {
         </form>
 
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-            Register
+          New to ResolveAI?{' '}
+          <Link to="/register" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+            Create Account
           </Link>
         </div>
       </div>
