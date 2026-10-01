@@ -13,6 +13,8 @@ import activityRoutes from './routes/activityRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import customerPortalRoutes from './routes/customerPortalRoutes.js';
+import supervisorRoutes from './routes/supervisorRoutes.js';
+import autonomyRoutes from './routes/autonomyRoutes.js';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
 
@@ -66,6 +68,8 @@ app.use('/api/approvals', approvalRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/customer', customerPortalRoutes);
+app.use('/api/supervisor', supervisorRoutes);
+app.use('/api/autonomy', autonomyRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api', systemRoutes);
 

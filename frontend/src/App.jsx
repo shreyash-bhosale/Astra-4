@@ -30,6 +30,7 @@ const OrdersPage = lazy(() => import('./pages/OrdersPage'));
 const PoliciesPage = lazy(() => import('./pages/PoliciesPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AIControlCenterPage = lazy(() => import('./pages/AIControlCenterPage'));
 
 function PageLoader() {
   return (
@@ -137,6 +138,8 @@ export default function App() {
             <Route path="/orders" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><OrdersPage /></Suspense></StaffProtectedRoute>} />
             <Route path="/policies" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><PoliciesPage /></Suspense></StaffProtectedRoute>} />
             <Route path="/activity" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><ActivityPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/control-center" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><AIControlCenterPage /></Suspense></StaffProtectedRoute>} />
+            <Route path="/supervisor" element={<Navigate to="/control-center" replace />} />
             <Route path="/settings" element={<StaffProtectedRoute><Suspense fallback={<PageLoader />}><SettingsPage /></Suspense></StaffProtectedRoute>} />
 
             {/* Fallback */}

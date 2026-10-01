@@ -20,7 +20,8 @@ import {
   X,
   ChevronRight,
   Search,
-  ExternalLink
+  ExternalLink,
+  Cpu
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -28,6 +29,7 @@ export default function DashboardLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [autonomyActive, setAutonomyActive] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -45,8 +47,14 @@ export default function DashboardLayout({ children }) {
 
   const fetchApprovalsCount = async () => {
     try {
-      const res = await api.getApprovals('PENDING');
+      const [res, supRes] = await Promise.all([
+        api.getApprovals('PENDING'),
+        api.getSupervisorStatus().catch(() => null)
+      ]);
       setPendingApprovalsCount(res.length);
+      if (supRes?.supervisor) {
+        setAutonomyActive(supRes.supervisor.mode === 'AUTONOMOUS');
+      }
     } catch (err) {
       // ignore
     }
@@ -54,7 +62,7 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     fetchApprovalsCount();
-    const interval = setInterval(fetchApprovalsCount, 8000);
+    const interval = setInterval(fetchApprovalsCount, 6000);
     return () => clearInterval(interval);
   }, [location.pathname]);
 
@@ -74,6 +82,7 @@ export default function DashboardLayout({ children }) {
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'AI Control Center', path: '/control-center', icon: Cpu, badge: autonomyActive ? 'ACTIVE' : null },
     { label: 'Tickets', path: '/tickets', icon: TicketCheck },
     { label: 'Approvals', path: '/approvals', icon: ShieldAlert, badge: pendingApprovalsCount },
     { label: 'Customers', path: '/customers', icon: Users },
@@ -341,6 +350,29 @@ export default function DashboardLayout({ children }) {
 
             {/* Theme Toggle Button */}
             <ThemeToggle />
+
+            {autonomyActive && (
+              <button
+                onClick={() => navigate('/control-center')}
+                title="Autonomous AI Mode Active — Click to inspect in AI Control Center"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  backgroundColor: '#000000',
+                  color: '#10b981',
+                  border: '1px solid #10b981',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                <span>AUTONOMOUS</span>
+              </button>
+            )}
 
             <button
               onClick={() => navigate('/tickets')}

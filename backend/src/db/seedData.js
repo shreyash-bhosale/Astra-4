@@ -366,6 +366,98 @@ export const getInitialData = () => {
     }
   ];
 
+  const autonomy_settings = [
+    {
+      id: 'autonomy-config',
+      enabled: false,
+      paused: false,
+      emergency_stopped: false,
+      enabled_by: null,
+      enabled_at: null,
+      refund_limit: 1000,
+      max_retries: 2,
+      allowed_tools: [
+        'get_customer',
+        'get_order',
+        'get_customer_orders',
+        'get_ticket_history',
+        'search_policies',
+        'update_ticket_status',
+        'create_internal_task',
+        'create_replacement_request',
+        'cancel_processing_order',
+        'send_customer_update',
+        'send_customer_update_email',
+        'verify_resolution'
+      ],
+      restricted_tools: [
+        'modify_authentication',
+        'modify_user_permissions',
+        'delete_customer_account',
+        'modify_security_settings',
+        'access_system_secrets',
+        'bypass_verification'
+      ],
+      risk_policy: {
+        low_risk: 'AUTONOMOUS',
+        medium_risk: 'AUTONOMOUS_IF_ALLOWED',
+        high_risk: 'ESCALATE_TO_SUPERVISOR'
+      },
+      history: [
+        {
+          id: 'hist-001',
+          action: 'AUTONOMY_CONFIGURED',
+          enabled: false,
+          actor: 'Alex Vance (Admin)',
+          timestamp: '2026-09-28T10:00:00.000Z',
+          note: 'Initial policy boundaries initialized'
+        }
+      ],
+      updated_at: '2026-10-01T07:00:00.000Z'
+    }
+  ];
+
+  const agent_health = [
+    { id: 'supervisor_agent', name: 'ResolveAI Supervisor Agent', badge: '◈', status: 'HEALTHY', state: 'ONLINE', execution_count: 24, last_task: 'System supervision & policy boundary enforcement' },
+    { id: 'orchestrator_agent', name: 'Orchestrator Agent', badge: '◉', status: 'HEALTHY', state: 'ONLINE', execution_count: 18, last_task: 'Dynamic DAG plan synthesis' },
+    { id: 'triage_agent', name: 'Triage Agent', badge: '△', status: 'HEALTHY', state: 'ONLINE', execution_count: 18, last_task: 'Issue classification and intent extraction' },
+    { id: 'investigation_agent', name: 'Investigation Agent', badge: '⌕', status: 'HEALTHY', state: 'ONLINE', execution_count: 18, last_task: 'Evidence grounding across CRM and carriers' },
+    { id: 'policy_agent', name: 'Policy Agent', badge: '▣', status: 'HEALTHY', state: 'ONLINE', execution_count: 18, last_task: 'Deterministic warranty and return policy checks' },
+    { id: 'action_agent', name: 'Action Agent', badge: '⚡', status: 'HEALTHY', state: 'ONLINE', execution_count: 16, last_task: 'Allowlisted tool execution with safety boundaries' },
+    { id: 'communication_agent', name: 'Communication Agent', badge: '✦', status: 'HEALTHY', state: 'ONLINE', execution_count: 18, last_task: 'Customer update formulation and channel dispatch' },
+    { id: 'verification_agent', name: 'Verification Agent', badge: '✓', status: 'HEALTHY', state: 'ONLINE', execution_count: 18, last_task: '5-point deterministic audit gatekeeping' }
+  ];
+
+  const supervisor_events = [
+    {
+      id: 'sup-ev-001',
+      event_type: 'SUPERVISOR_BOOT',
+      title: 'Supervisor Agent Initialized',
+      description: 'Supervisory intelligence active. Monitoring 7 operational agents with policy-bounded control.',
+      severity: 'INFO',
+      metadata: { activeAgents: 7, autonomyMode: 'DISABLED' },
+      created_at: '2026-10-01T06:00:00.000Z'
+    },
+    {
+      id: 'sup-ev-002',
+      event_type: 'HEALTH_CHECK_PASSED',
+      title: 'Fleet Health Confirmed',
+      description: 'All 7 specialized agent endpoints responding with 100% schema validation parity.',
+      severity: 'INFO',
+      metadata: { healthyCount: 7, failedCount: 0 },
+      created_at: '2026-10-01T06:30:00.000Z'
+    },
+    {
+      id: 'sup-ev-003',
+      event_type: 'POLICY_BOUNDARY_VERIFIED',
+      title: 'Safety Constraints Active',
+      description: 'Allowlisted tools locked to 12 endpoints. High-risk destructive tools permanently blocked.',
+      severity: 'INFO',
+      metadata: { allowedToolsCount: 12, restrictedToolsCount: 6 },
+      created_at: '2026-10-01T07:00:00.000Z'
+    }
+  ];
+
   return {
     users,
     customers,
@@ -375,6 +467,9 @@ export const getInitialData = () => {
     agent_runs,
     agent_steps,
     approvals,
-    audit_logs
+    audit_logs,
+    autonomy_settings,
+    supervisor_events,
+    agent_health
   };
 };

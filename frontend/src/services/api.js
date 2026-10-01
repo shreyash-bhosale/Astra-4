@@ -311,6 +311,72 @@ class ApiClient {
     });
   }
 
+  // Supervisor Agent & AI Control Center
+  getSupervisorStatus() {
+    return this.request('/supervisor/status');
+  }
+
+  getSupervisorAgents() {
+    return this.request('/supervisor/agents');
+  }
+
+  getSupervisorWorkflows() {
+    return this.request('/supervisor/workflows');
+  }
+
+  getSupervisorEvents() {
+    return this.request('/supervisor/events');
+  }
+
+  sendSupervisorQuery(query) {
+    return this.request('/supervisor/query', {
+      method: 'POST',
+      body: JSON.stringify({ query })
+    });
+  }
+
+  // Policy-Bounded Autonomous AI Mode
+  getAutonomySettings() {
+    return this.request('/autonomy/settings');
+  }
+
+  updateAutonomySettings(settings) {
+    return this.request('/autonomy/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(settings)
+    });
+  }
+
+  enableAutonomousMode() {
+    return this.request('/autonomy/enable', {
+      method: 'POST'
+    });
+  }
+
+  disableAutonomousMode() {
+    return this.request('/autonomy/disable', {
+      method: 'POST'
+    });
+  }
+
+  pauseAutonomousMode() {
+    return this.request('/autonomy/pause', {
+      method: 'POST'
+    });
+  }
+
+  resumeAutonomousMode() {
+    return this.request('/autonomy/resume', {
+      method: 'POST'
+    });
+  }
+
+  emergencyStopAutonomy() {
+    return this.request('/autonomy/emergency-stop', {
+      method: 'POST'
+    });
+  }
+
   resetDemo() {
     return this.request('/reset', {
       method: 'POST'

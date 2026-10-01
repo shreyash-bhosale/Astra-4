@@ -425,6 +425,78 @@ export function handleClientMock(endpoint, options = {}) {
       recentAuditLogs: store.audit_logs.slice(0, 15)
     };
   }
+  // Supervisor Agent & AI Control Center
+  if (endpoint === '/supervisor/status') {
+    return {
+      supervisor: {
+        name: 'ResolveAI Supervisor Agent',
+        badge: '◈',
+        status: 'ACTIVE',
+        mode: 'AUTONOMOUS',
+        emergencyStopped: false
+      },
+      fleetHealth: { totalAgents: 8, healthyCount: 8, allHealthy: true },
+      telemetry: {
+        activeWorkflowsCount: store.tickets.filter(t => t.status === 'AI_PROCESSING' || t.status === 'WAITING_APPROVAL').length,
+        pendingApprovalsCount: store.approvals.length,
+        totalCasesCount: store.tickets.length,
+        resolvedCasesCount: store.tickets.filter(t => t.status === 'RESOLVED').length
+      },
+      settings: {
+        id: 'autonomy-config',
+        enabled: true,
+        paused: false,
+        emergency_stopped: false,
+        refund_limit: 1000,
+        allowed_tools: ['get_customer', 'get_order', 'search_policies', 'create_replacement_request', 'send_customer_update', 'verify_resolution']
+      }
+    };
+  }
+
+  if (endpoint === '/supervisor/agents') {
+    return [
+      { id: 'supervisor_agent', name: 'ResolveAI Supervisor Agent', badge: '◈', status: 'HEALTHY', state: 'ONLINE', execution_count: 28, last_task: 'Policy-bounded autonomous supervision' },
+      { id: 'orchestrator_agent', name: 'Orchestrator Agent', badge: '◉', status: 'HEALTHY', state: 'ONLINE', execution_count: 22, last_task: 'Dynamic DAG resolution planning' },
+      { id: 'triage_agent', name: 'Triage Agent', badge: '△', status: 'HEALTHY', state: 'ONLINE', execution_count: 22, last_task: 'Intent classification & entity extraction' },
+      { id: 'investigation_agent', name: 'Investigation Agent', badge: '⌕', status: 'HEALTHY', state: 'ONLINE', execution_count: 22, last_task: 'Carrier tracking & CRM verification' },
+      { id: 'policy_agent', name: 'Policy Agent', badge: '▣', status: 'HEALTHY', state: 'ONLINE', execution_count: 22, last_task: 'Deterministic warranty rules evaluation' },
+      { id: 'action_agent', name: 'Action Agent', badge: '⚡', status: 'HEALTHY', state: 'ONLINE', execution_count: 20, last_task: 'Allowlisted tool provisioning' },
+      { id: 'communication_agent', name: 'Communication Agent', badge: '✦', status: 'HEALTHY', state: 'ONLINE', execution_count: 22, last_task: 'Customer email dispatch & tone safeguard' },
+      { id: 'verification_agent', name: 'Verification Agent', badge: '✓', status: 'HEALTHY', state: 'ONLINE', execution_count: 22, last_task: '5-point deterministic audit gatekeeping' }
+    ];
+  }
+
+  if (endpoint === '/supervisor/events') {
+    return [
+      { id: 'sup-1', event_type: 'AUTONOMOUS_AUTHORIZATION_GRANTED', title: 'Autonomous Authority Granted', description: 'Supervisor authorized create_replacement_request under POL-001 within configured autonomy bounds.', severity: 'INFO', created_at: new Date(Date.now() - 120000).toISOString() },
+      { id: 'sup-2', event_type: 'POLICY_BOUNDARY_VERIFIED', title: 'Safety Constraints Active', description: 'Allowlisted tools locked to 12 endpoints. High-risk destructive tools permanently blocked.', severity: 'INFO', created_at: new Date(Date.now() - 3600000).toISOString() }
+    ];
+  }
+
+  if (endpoint === '/supervisor/query' && method === 'POST') {
+    return {
+      answer: `Supervisor Telemetry: System is operating normally in AUTONOMOUS mode. 8/8 agents reporting HEALTHY. Refund limit is configured at $1,000. All operations are bounded by policy POL-001 and verified before closing.`,
+      source: 'deterministic'
+    };
+  }
+
+  // Autonomy settings & actions
+  if (endpoint === '/autonomy/settings') {
+    return {
+      id: 'autonomy-config',
+      enabled: true,
+      paused: false,
+      emergency_stopped: false,
+      refund_limit: 1000,
+      allowed_tools: ['get_customer', 'get_order', 'search_policies', 'create_replacement_request', 'cancel_processing_order', 'send_customer_update', 'verify_resolution'],
+      restricted_tools: ['modify_authentication', 'modify_user_permissions', 'delete_customer_account', 'access_system_secrets']
+    };
+  }
+
+  if (endpoint.startsWith('/autonomy/') && method === 'POST') {
+    return { success: true, message: 'Autonomy status updated successfully.' };
+  }
+
   if (endpoint.startsWith('/customers')) return store.customers;
   if (endpoint.startsWith('/orders')) return store.orders;
   if (endpoint.startsWith('/policies')) return store.policies;

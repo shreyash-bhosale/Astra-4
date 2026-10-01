@@ -9,6 +9,7 @@ import { verificationAgent } from './verificationAgent.js';
 import { aiService } from '../services/aiService.js';
 import { emailService } from '../services/emailService.js';
 import { PlanOutputSchema } from '../validators/index.js';
+import { supervisorAgent } from './supervisorAgent.js';
 
 export class OrchestratorAgent {
   constructor() {
@@ -269,15 +270,37 @@ Formulate a 6-step resolution plan selecting from available agents:
       metadata: context.policyResult
     });
 
-    // Step 4: Action Agent
+    // Step 4: Action Agent & Supervisor Autonomy Check
     this.updateRunStepStatus(run.id, 4, 'RUNNING');
+
+    // Supervisor Agent evaluates if this action can proceed autonomously under active policy
+    const supervisorCheck = supervisorAgent.evaluateActionApproval({
+      ticket,
+      run,
+      action: context.policyResult.recommendedAction,
+      policyResult: context.policyResult,
+      investigationResult: context.investigationResult
+    });
+
+    const isAuthorized = resumeFromApproval || supervisorCheck.autonomousAuthorized;
+
+    if (supervisorCheck.autonomousAuthorized) {
+      db.logAudit({
+        ticket_id: ticketId,
+        event_type: 'SUPERVISOR_AUTONOMOUS_AUTHORIZATION',
+        agent: supervisorAgent.name,
+        description: `Supervisor granted autonomous execution authority for '${context.policyResult.recommendedAction}' under configured autonomy policy bounds.`,
+        metadata: { action: context.policyResult.recommendedAction, reason: supervisorCheck.reason }
+      });
+    }
+
     context.actionResult = await actionAgent.run({
       ticket,
       runId: run.id,
       stepId: 'step-004',
       policyResult: context.policyResult,
       investigationResult: context.investigationResult,
-      isApproved: resumeFromApproval
+      isApproved: isAuthorized
     });
 
     recordToolCall(
