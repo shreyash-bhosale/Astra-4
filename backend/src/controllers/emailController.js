@@ -20,7 +20,15 @@ export const sendTestEmail = async (req, res, next) => {
       return res.status(401).json({ error: 'Authenticated administrator account required.' });
     }
 
-    const result = await emailService.sendTestEmail({ adminUser: req.user });
+    const customRecipient = req.body?.to || req.body?.targetRecipient;
+    const targetRecipient = (customRecipient && typeof customRecipient === 'string' && customRecipient.includes('@'))
+      ? customRecipient.trim()
+      : req.user.email;
+
+    const result = await emailService.sendTestEmail({ 
+      adminUser: req.user,
+      targetRecipient
+    });
 
     if (!result.success) {
       return res.status(502).json({
@@ -32,8 +40,8 @@ export const sendTestEmail = async (req, res, next) => {
 
     return res.json({
       success: true,
-      message: `Test email successfully dispatched to ${req.user.email}`,
-      recipient: req.user.email,
+      message: `Test email successfully dispatched to ${targetRecipient}`,
+      recipient: targetRecipient,
       providerMessageId: result.messageId,
       notificationId: result.notificationId,
       status: result.status

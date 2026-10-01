@@ -61,6 +61,7 @@ export default function SettingsPage() {
   const [emailStatus, setEmailStatus] = useState(null);
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState(null);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('shreyashbiit1508@gmail.com');
 
   const loadSettings = async () => {
     try {
@@ -97,7 +98,8 @@ export default function SettingsPage() {
     try {
       setSendingTestEmail(true);
       setTestEmailResult(null);
-      const res = await api.sendAdminTestEmail();
+      const target = testEmailRecipient?.trim() || user?.email;
+      const res = await api.sendAdminTestEmail(target);
       setTestEmailResult({
         success: true,
         message: `Dispatched test email to ${res.recipient} (Delivery ID: ${res.providerMessageId || 'msg_resend_live'})`
@@ -937,9 +939,7 @@ export default function SettingsPage() {
                       border: '1px solid var(--border-subtle)',
                       backgroundColor: 'rgba(59, 130, 246, 0.04)',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
+                      flexDirection: 'column',
                       gap: '12px'
                     }}
                   >
@@ -948,26 +948,46 @@ export default function SettingsPage() {
                         Send Test Verification Email
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        Dispatches a verification email exclusively to your authenticated address (<strong style={{ color: 'var(--text-primary)' }}>{user?.email}</strong>).
+                        Dispatches a live transactional verification email through configured Resend provider.
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleSendTestEmail}
-                      disabled={sendingTestEmail}
-                      className="btn-secondary"
-                      style={{
-                        height: '38px',
-                        paddingInline: '16px',
-                        gap: '6px',
-                        fontWeight: 600,
-                        fontSize: '0.84rem'
-                      }}
-                    >
-                      {sendingTestEmail ? <RefreshCw size={14} className="spin" /> : <Send size={14} />}
-                      <span>{sendingTestEmail ? 'Dispatching...' : 'Send Test Email'}</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="email"
+                        value={testEmailRecipient}
+                        onChange={(e) => setTestEmailRecipient(e.target.value)}
+                        placeholder="Recipient email address"
+                        style={{
+                          height: '38px',
+                          paddingInline: '12px',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-subtle)',
+                          backgroundColor: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.84rem',
+                          flex: 1,
+                          minWidth: '240px'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendTestEmail}
+                        disabled={sendingTestEmail}
+                        className="btn-secondary"
+                        style={{
+                          height: '38px',
+                          paddingInline: '16px',
+                          gap: '6px',
+                          fontWeight: 600,
+                          fontSize: '0.84rem',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {sendingTestEmail ? <RefreshCw size={14} className="spin" /> : <Send size={14} />}
+                        <span>{sendingTestEmail ? 'Dispatching...' : 'Send Test Email'}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 

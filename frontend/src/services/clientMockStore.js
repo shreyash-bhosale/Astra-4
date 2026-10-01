@@ -448,7 +448,7 @@ export function handleClientMock(endpoint, options = {}) {
 
   // Emails: POST /emails/test
   if (endpoint === '/emails/test' && method === 'POST') {
-    const adminEmail = store.users?.find(u => u.role === 'admin')?.email || 'admin@resolveai.io';
+    const adminEmail = body?.to || store.users?.find(u => u.role === 'admin')?.email || 'admin@resolveai.io';
     const testId = `msg_resend_live_${Date.now().toString(36)}`;
     const newEmail = {
       id: `eml-${Date.now().toString(36)}`,

@@ -169,9 +169,10 @@ class ApiClient {
     return this.request('/emails/status');
   }
 
-  sendAdminTestEmail() {
+  sendAdminTestEmail(to) {
     return this.request('/emails/test', {
-      method: 'POST'
+      method: 'POST',
+      body: to ? JSON.stringify({ to }) : undefined
     });
   }
 

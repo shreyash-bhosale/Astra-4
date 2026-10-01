@@ -194,9 +194,52 @@ export class EmailService {
           });
 
           if (error) {
-            throw new Error(error.message || 'Resend provider error');
+            // Check if this error is caused by Resend sandbox/unverified custom domain restriction
+            const isSandboxRestriction = (error.statusCode === 403 || error.statusCode === 422) &&
+              (error.message?.includes('You can only send testing emails to your own email address') ||
+               error.message?.includes('testing email address') ||
+               error.message?.includes('resend.com/domains') ||
+               error.message?.includes('Invalid `to` field'));
+
+            if (isSandboxRestriction) {
+              const sandboxRecipient = (error.message?.match(/\(([^)]+@[^)]+)\)/)?.[1]) || config.resendTestRecipient || 'shreyashbiit1508@gmail.com';
+              console.log(`[EMAIL] ⚠️ Resend sandbox restriction active. Intended recipient: <${cleanTo}>. Safely delivering live email to verified account owner <${sandboxRecipient}>.`);
+
+              const sandboxNotice = `
+                <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: #92400e; line-height: 1.5;">
+                  <div style="font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; margin-bottom: 4px;">⚡ ResolveAI Transactional Dispatch (Resend Sandbox)</div>
+                  This automated transactional email was generated for intended recipient: <strong>&lt;${cleanTo}&gt;</strong>.<br/>
+                  Delivered to your verified developer email (<strong>${sandboxRecipient}</strong>) because <code>${this.fromAddress}</code> is in Resend sandbox test mode.
+                </div>
+              `;
+
+              const fallbackRes = await this.resend.emails.send({
+                from: this.fromAddress,
+                to: [sandboxRecipient],
+                reply_to: this.replyToAddress,
+                subject: `[For: ${cleanTo}] ${cleanSubject}`,
+                html: sandboxNotice + (html || `<pre>${text}</pre>`),
+                text: `[Intended Recipient: ${cleanTo}]\n\n${text}`
+              });
+
+              if (fallbackRes.error) {
+                throw new Error(fallbackRes.error.message || 'Resend sandbox fallback failed');
+              }
+
+              providerMessageId = fallbackRes.data?.id || `resend_${uuidv4()}`;
+              db.update('email_notifications', notificationRecord.id, {
+                metadata: {
+                  sandbox_rerouted: true,
+                  intended_recipient: cleanTo,
+                  actual_recipient: sandboxRecipient
+                }
+              });
+            } else {
+              throw new Error(error.message || 'Resend provider error');
+            }
+          } else {
+            providerMessageId = data?.id || `resend_${uuidv4()}`;
           }
-          providerMessageId = data?.id || `resend_${uuidv4()}`;
         } else {
           // High-Fidelity Transactional Provider Simulator
           // Generates unique cryptographic delivery receipt ID and verifies formatting
@@ -628,10 +671,12 @@ export class EmailService {
   }
 
   // 8. Admin Test Dispatch
-  async sendTestEmail({ adminUser }) {
+  async sendTestEmail({ adminUser, targetRecipient }) {
     if (!adminUser || !adminUser.email) {
       throw new Error('Admin user email is required for test email dispatch.');
     }
+
+    const recipient = targetRecipient || adminUser.email;
 
     const { subject, html, text } = emailTemplates.testEmail({
       adminName: adminUser.name || 'System Administrator',
@@ -640,14 +685,14 @@ export class EmailService {
     });
 
     return await this.sendEmail({
-      to: adminUser.email,
+      to: recipient,
       subject,
       html,
       text,
       ticketId: 'SYS-TEST',
       customerId: null,
       eventType: 'ADMIN_TEST',
-      idempotencyKey: `SYS-TEST_${adminUser.email}_${Date.now()}`
+      idempotencyKey: `SYS-TEST_${recipient}_${Date.now()}`
     });
   }
 

@@ -36,6 +36,7 @@ export const config = {
   emailReplyTo: process.env.EMAIL_REPLY_TO || 'support@resolveai.io',
   managerNotificationEmail: process.env.MANAGER_NOTIFICATION_EMAIL || 'manager@resolveai.io',
   emailMode: process.env.EMAIL_MODE || (process.env.RESEND_API_KEY ? 'provider' : 'simulator'),
+  resendTestRecipient: process.env.RESEND_TEST_RECIPIENT || 'shreyashbiit1508@gmail.com',
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
   databaseMode: process.env.DATABASE_MODE || (process.env.NODE_ENV === 'production' && (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ? 'supabase' : 'local')
