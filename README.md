@@ -16,9 +16,13 @@
   <a href="https://github.com/shreyash-bhosale/Astra-4">
     <img src="https://img.shields.io/badge/SOURCE%20CODE-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Repository" />
   </a>
-  <a href="<DEMO_VIDEO_URL>">
-    <img src="https://img.shields.io/badge/DEMO%20VIDEO-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video" />
+  <a href="./docs/screenshots/resolveai-demo-walkthrough.gif">
+    <img src="https://img.shields.io/badge/DEMO%20VIDEO-ANIMATED%20WALKTHROUGH-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video" />
   </a>
+</p>
+
+<p align="center">
+  <img src="./docs/screenshots/resolveai-demo-walkthrough.gif" alt="ResolveAI Autonomous Operations Walkthrough Demo" width="95%" />
 </p>
 
 <p align="center">
@@ -145,29 +149,47 @@ Supervisor Authorizes \
 
 | Resource | Link | Description |
 | :--- | :--- | :--- |
-| **Live Application** | [`<LIVE_DEMO_URL>`](file:///) | Production web application with Dark/Light mode and interactive 3D hero. |
-| **Demo Video Walkthrough** | [`[▶️ Watch ResolveAI Demo Video]`](file:///) | 3-minute comprehensive judge walkthrough of multi-agent execution and HITL gating. |
+| **Demo Walkthrough Video** | [`[▶️ Watch Animated Video Walkthrough]`](./docs/screenshots/resolveai-demo-walkthrough.gif) | Complete animated resolution walkthrough: multi-agent DAG execution, approval gating, and autonomous resolution. |
+| **Live Web App** | [`<LIVE_DEMO_URL>`](file:///) | Production web application with Dark/Light mode and interactive 3D hero. |
 | **GitHub Repository** | [`https://github.com/shreyash-bhosale/Astra-4`](https://github.com/shreyash-bhosale/Astra-4) | Complete full-stack codebase with frontend, backend, test suite, and schema. |
 
 ---
 
-## 🖼️ User Interface & Screenshots
+## 🖼️ User Interface & Screenshots Gallery
 
 ResolveAI is designed with a **futuristic liquid-metal aesthetic**, editorial typography, high-contrast dark mode (default) and light mode, and responsive 12-column layouts.
 
-<div align="center">
+### 1. Futuristic Liquid-Metal Landing Page Hero (Dark Mode & Light Mode)
+<p align="center">
+  <img src="./docs/screenshots/landing_page_dark.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Dark Mode" width="49%" />
+  <img src="./docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Light Mode" width="49%" />
+</p>
 
-### Hero Section & 3D Interactive Liquid-Metal Chrome Canvas
-<img src="./frontend/src/assets/hero.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero" width="95%" />
+### 2. Autonomous Multi-Agent Fleet Showcase & Interactive Monitor
+<p align="center">
+  <img src="./docs/screenshots/agent_fleet_showcase.png" alt="7-Agent Autonomous Fleet Showcase" width="95%" />
+</p>
 
-</div>
+### 3. Operations Dashboard & Real-Time Fleet Health
+<p align="center">
+  <img src="./docs/screenshots/dashboard_overview.png" alt="ResolveAI Operations Dashboard" width="95%" />
+</p>
 
-### Additional Screenshots
-* `TODO: Add screenshots to docs/screenshots/`
-  * `docs/screenshots/dashboard_overview.png` — Real-time multi-agent fleet monitor and pending approvals spotlight.
-  * `docs/screenshots/ticket_workspace.png` — Dynamic 6-step DAG execution timeline, evidence dossier, and audit trail.
-  * `docs/screenshots/human_approval_gate.png` — Human-in-the-loop supervisor authorization modal.
-  * `docs/screenshots/dark_light_toggle.png` — Seamless dual-theme switching across dark obsidian and light studio modes.
+### 4. Interactive 6-Step DAG Execution Workspace & Human-in-the-Loop Gate
+<p align="center">
+  <img src="./docs/screenshots/ticket_workspace_paused_gate.png" alt="Ticket Workspace Paused at Human Approval Gate" width="49%" />
+  <img src="./docs/screenshots/human_approval_gate.png" alt="Human-in-the-Loop Supervisor Approval Queue" width="49%" />
+</p>
+
+### 5. Verified Case Resolution with Immutable Audit Trail
+<p align="center">
+  <img src="./docs/screenshots/ticket_workspace_resolved.png" alt="Verified Resolution State with 5-Point Audit Checklist" width="95%" />
+</p>
+
+### 6. Rapid Evaluation Login Screen with 1-Click Demo Personas
+<p align="center">
+  <img src="./docs/screenshots/login_page.png" alt="ResolveAI Authentication & 1-Click Personas" width="60%" />
+</p>
 
 ---
 
