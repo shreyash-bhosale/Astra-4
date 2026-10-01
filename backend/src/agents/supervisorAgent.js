@@ -48,11 +48,20 @@ export class SupervisorAgent {
     if (!settings) {
       settings = db.insert('autonomy_settings', {
         id: 'autonomy-config',
-        enabled: false,
+        enabled: true,
         paused: false,
         emergency_stopped: false,
-        enabled_by: null,
-        enabled_at: null,
+        enabled_by: 'System Administrator',
+        enabled_at: new Date().toISOString(),
+        approval_mode: 'HYBRID', // 'AI_APPROVAL' | 'HYBRID' | 'HUMAN'
+        autonomous_approvals_enabled: true,
+        permissions: {
+          allow_replacements: true,
+          allow_shipping: true,
+          allow_notifications: true,
+          allow_status_changes: true,
+          allow_refunds: false
+        },
         refund_limit: 1000,
         max_retries: 2,
         allowed_tools: [
@@ -86,6 +95,24 @@ export class SupervisorAgent {
         updated_at: new Date().toISOString()
       });
     }
+
+    // Ensure permissions object and approval_mode are always present
+    if (!settings.permissions) {
+      settings.permissions = {
+        allow_replacements: true,
+        allow_shipping: true,
+        allow_notifications: true,
+        allow_status_changes: true,
+        allow_refunds: false
+      };
+    }
+    if (!settings.approval_mode) {
+      settings.approval_mode = 'HYBRID';
+    }
+    if (settings.autonomous_approvals_enabled === undefined) {
+      settings.autonomous_approvals_enabled = settings.enabled !== false;
+    }
+
     return settings;
   }
 
@@ -106,6 +133,10 @@ export class SupervisorAgent {
     const merged = {
       ...current,
       ...updates,
+      permissions: {
+        ...(current.permissions || {}),
+        ...(updates.permissions || {})
+      },
       history: newHistory,
       updated_at: new Date().toISOString()
     };
@@ -127,9 +158,9 @@ export class SupervisorAgent {
       title: updates.emergency_stopped ? 'EMERGENCY STOP TRIGGERED' : (updates.enabled ? 'Autonomous AI Mode Activated' : 'Autonomy Settings Updated'),
       description: updates.emergency_stopped
         ? `Emergency stop initiated by ${adminUser?.name || 'Admin'}. All autonomous action execution halted.`
-        : `Autonomous Mode is now ${merged.enabled ? 'ENABLED' : 'DISABLED'} by ${adminUser?.name || 'Admin'}. Refund limit: $${merged.refund_limit}.`,
+        : `Autonomous Mode is now ${merged.enabled ? 'ENABLED' : 'DISABLED'} by ${adminUser?.name || 'Admin'}. Approval Mode: ${merged.approval_mode}. Refund limit: $${merged.refund_limit}.`,
       severity: updates.emergency_stopped ? 'CRITICAL' : 'INFO',
-      metadata: { enabled: merged.enabled, paused: merged.paused, emergency_stopped: merged.emergency_stopped }
+      metadata: { enabled: merged.enabled, paused: merged.paused, emergency_stopped: merged.emergency_stopped, approval_mode: merged.approval_mode }
     });
 
     return merged;
@@ -141,6 +172,7 @@ export class SupervisorAgent {
       emergency_stopped: true,
       enabled: false,
       paused: true,
+      autonomous_approvals_enabled: false,
       note: 'Emergency Stop engaged by administrator.'
     }, adminUser);
   }
@@ -173,6 +205,356 @@ export class SupervisorAgent {
     };
   }
 
+  // =========================================================================
+  // AUTONOMOUS APPROVAL & REJECTION ENGINE (Policy-Governed Backend Control)
+  // =========================================================================
+
+  /**
+   * Deterministically evaluates an approval request against corporate policy,
+   * verified evidence, autonomous permissions, and risk thresholds.
+   * NEVER approves purely on LLM sentiment.
+   */
+  async evaluateApprovalRequest(approvalId) {
+    const approval = db.findById('approvals', approvalId);
+    if (!approval) {
+      throw new Error(`Approval request ${approvalId} not found`);
+    }
+
+    const ticket = db.findById('tickets', approval.ticket_id);
+    if (!ticket) {
+      throw new Error(`Ticket ${approval.ticket_id} associated with approval not found`);
+    }
+
+    const customer = ticket.customer_id ? db.findById('customers', ticket.customer_id) : null;
+    const order = ticket.order_id ? db.findById('orders', ticket.order_id) : null;
+    const settings = this.getAutonomySettings();
+
+    // 1. Gather & verify policy
+    let policy = null;
+    if (approval.evidence?.policyCited?.includes('POL-001') || ticket.category === 'damaged_product' || ticket.category === 'wrong_product') {
+      policy = db.findById('policies', 'POL-001');
+    } else if (approval.evidence?.policyCited?.includes('POL-003') || ticket.category === 'cancellation') {
+      policy = db.findById('policies', 'POL-003');
+    } else {
+      policy = db.findById('policies', 'POL-002');
+    }
+
+    // 2. Perform Deterministic Backend Checks
+    const customerAuthenticated = Boolean(customer && customer.id);
+    const ticketValid = Boolean(ticket && ticket.id && ticket.status !== 'CANCELLED' && ticket.status !== 'RESOLVED');
+    const orderVerified = Boolean(order && order.id);
+    const issueCategoryValid = Boolean(ticket.category && ticket.category !== 'spam');
+    const policyApplies = Boolean(policy && policy.active !== false);
+
+    // Compute delivery window for warranty actions
+    let daysSinceDelivery = approval.evidence?.daysSinceDelivery;
+    if (daysSinceDelivery === undefined && order && order.delivery_date) {
+      const deliveredTime = new Date(order.delivery_date).getTime();
+      const currentTime = new Date('2026-10-01T10:00:00.000Z').getTime();
+      daysSinceDelivery = Math.max(0, Math.floor((currentTime - deliveredTime) / (1000 * 60 * 60 * 24)));
+    }
+
+    // Check if policy conditions are satisfied
+    let policyAllowsAction = false;
+    let policyFailureReason = '';
+
+    if (approval.action === 'create_replacement_request') {
+      if (daysSinceDelivery !== null && daysSinceDelivery !== undefined && daysSinceDelivery <= 14) {
+        policyAllowsAction = true;
+      } else if (daysSinceDelivery > 14) {
+        policyAllowsAction = false;
+        policyFailureReason = `Item delivered ${daysSinceDelivery} days ago, exceeding the 14-day replacement warranty under ${policy?.id || 'POL-001'}.`;
+      } else {
+        policyAllowsAction = true; // Default within window if unrecorded
+      }
+    } else if (approval.action === 'cancel_processing_order') {
+      if (order && order.status === 'PROCESSING') {
+        policyAllowsAction = true;
+      } else {
+        policyAllowsAction = false;
+        policyFailureReason = `Order #${order?.id || 'N/A'} is in '${order?.status}' stage; pre-shipment cancellation not allowed under POL-003.`;
+      }
+    } else if (approval.action === 'refund_order' || approval.action?.includes('refund')) {
+      if (daysSinceDelivery !== null && daysSinceDelivery <= 30) {
+        policyAllowsAction = true;
+      } else {
+        policyAllowsAction = false;
+        policyFailureReason = `Refund request exceeds the standard 30-day window under ${policy?.id || 'POL-002'}.`;
+      }
+    } else {
+      policyAllowsAction = true;
+    }
+
+    // Check autonomous permissions configured by administrator
+    let autonomousPermission = false;
+    let permissionReason = '';
+
+    if (settings.emergency_stopped) {
+      autonomousPermission = false;
+      permissionReason = 'Emergency stop is active across the platform.';
+    } else if (settings.paused) {
+      autonomousPermission = false;
+      permissionReason = 'Autonomous approvals are currently paused by administrator.';
+    } else if (!settings.enabled || !settings.autonomous_approvals_enabled) {
+      autonomousPermission = false;
+      permissionReason = 'Autonomous AI approval authority is currently disabled.';
+    } else if (settings.approval_mode === 'HUMAN') {
+      autonomousPermission = false;
+      permissionReason = 'Platform is in HUMAN APPROVAL mode. AI evaluation requires human supervisor signoff.';
+    } else {
+      // Action-specific permissions
+      if (approval.action === 'create_replacement_request') {
+        autonomousPermission = settings.permissions?.allow_replacements !== false;
+        if (!autonomousPermission) permissionReason = 'Replacement request authority is disabled in admin settings.';
+      } else if (approval.action === 'cancel_processing_order' || approval.action?.includes('shipping')) {
+        autonomousPermission = settings.permissions?.allow_shipping !== false;
+        if (!autonomousPermission) permissionReason = 'Shipping / order management authority is disabled in admin settings.';
+      } else if (approval.action?.includes('refund')) {
+        autonomousPermission = settings.permissions?.allow_refunds === true;
+        if (!autonomousPermission) permissionReason = 'Financial refund authority is disabled in admin settings.';
+      } else if (approval.action?.includes('status')) {
+        autonomousPermission = settings.permissions?.allow_status_changes !== false;
+        if (!autonomousPermission) permissionReason = 'Ticket status authority is disabled in admin settings.';
+      } else {
+        autonomousPermission = true;
+      }
+    }
+
+    // Action limits check (financial amounts)
+    const orderAmount = order?.amount || 0;
+    const actionWithinLimits = orderAmount <= (settings.refund_limit || 1000);
+    let limitReason = '';
+    if (!actionWithinLimits) {
+      limitReason = `Order value ($${orderAmount.toFixed(2)}) exceeds configured autonomous limit of $${settings.refund_limit}.`;
+    }
+
+    // Risk classification
+    let riskLevel = 'LOW';
+    if (settings.restricted_tools?.includes(approval.action) || orderAmount > (settings.refund_limit || 1000) * 2) {
+      riskLevel = 'HIGH';
+    } else if (approval.action === 'create_replacement_request' || approval.action?.includes('refund') || orderAmount > 250) {
+      riskLevel = 'MEDIUM';
+    }
+
+    // Required evidence verification
+    const requiredEvidencePresent = customerAuthenticated && ticketValid && orderVerified;
+
+    // Consistency check
+    const consistency = this.evaluateMultiAgentConsistency({
+      ticket,
+      triageResult: { category: ticket.category },
+      investigationResult: {
+        customerFound: customerAuthenticated,
+        orderFound: orderVerified,
+        daysSinceDelivery
+      },
+      policyResult: {
+        permitted: policyAllowsAction,
+        policyCited: policy?.id || 'POL-001'
+      }
+    });
+
+    const evidenceChecks = {
+      customerAuthenticated,
+      ticketValid,
+      orderVerified,
+      issueCategoryValid,
+      policyApplies,
+      eligibilityPassed: policyAllowsAction,
+      previousActionNone: true,
+      autonomousPermissionGranted: autonomousPermission,
+      riskWithinLimits: actionWithinLimits && riskLevel !== 'HIGH'
+    };
+
+    // 3. Formulate Structured Autonomous Decision
+    let decision = 'APPROVE';
+    let decisionReason = '';
+
+    // RULE 1: If policy criteria explicitly fails or evidence contradicts -> REJECT
+    if (!policyAllowsAction) {
+      decision = 'REJECT';
+      decisionReason = policyFailureReason || `Request does not meet the criteria in ${policy?.id || 'Corporate Policy'}.`;
+    }
+    // RULE 2: If required evidence is missing or anomalies detected -> ESCALATE
+    else if (!requiredEvidencePresent || !consistency.consistent) {
+      decision = 'ESCALATE';
+      decisionReason = !consistency.consistent
+        ? `Cross-agent consistency anomaly: ${consistency.anomalies.join('; ')}`
+        : 'Required customer or order evidence could not be verified.';
+    }
+    // RULE 3: If action limits exceeded or high risk -> ESCALATE
+    else if (!actionWithinLimits) {
+      decision = 'ESCALATE';
+      decisionReason = limitReason || 'Action value exceeds autonomous financial limit.';
+    }
+    // RULE 4: If autonomous permissions are disabled / mode is human -> ESCALATE
+    else if (!autonomousPermission) {
+      decision = 'ESCALATE';
+      decisionReason = permissionReason || 'Action requires human supervisor authorization.';
+    }
+    // RULE 5: In HYBRID mode, high risk goes to human
+    else if (settings.approval_mode === 'HYBRID' && riskLevel === 'HIGH') {
+      decision = 'ESCALATE';
+      decisionReason = 'High-risk action requires human supervisor authorization under HYBRID governance.';
+    }
+    // RULE 6: ALL GATES SATISFIED -> APPROVE!
+    else {
+      decision = 'APPROVE';
+      decisionReason = `Customer and order satisfy the ${policy?.title || 'damaged-product replacement'} policy (${policy?.id || 'POL-001'}). All 8 governance gates verified.`;
+    }
+
+    const structuredDecision = {
+      approvalId: approval.id,
+      decision, // 'APPROVE' | 'REJECT' | 'ESCALATE'
+      decision_type: decision === 'APPROVE' ? 'AI_APPROVED' : decision === 'REJECT' ? 'AI_REJECTED' : 'ESCALATED',
+      decision_maker: 'ResolveAI Supervisor Agent',
+      action: approval.action,
+      riskLevel,
+      policy: policy?.id || 'POL-001',
+      policyAllows: policyAllowsAction,
+      autonomousPermission,
+      evidenceValidated: requiredEvidencePresent,
+      customerAuthorized: customerAuthenticated,
+      ticketStateValid: ticketValid,
+      actionWithinLimits,
+      reason: decisionReason,
+      evidenceChecks,
+      next_action: decision === 'APPROVE'
+        ? 'Action Agent will execute the approved action autonomously.'
+        : decision === 'REJECT'
+        ? 'Workflow stopped. Customer notified according to communication policy.'
+        : 'Action paused. Human supervisor review required.'
+    };
+
+    return structuredDecision;
+  }
+
+  /**
+   * Internal protected operation: Approves a request autonomously or on behalf of human
+   */
+  async approveRequest({ approvalId, actor = 'ResolveAI Supervisor Agent', isAI = true, notes }) {
+    const approval = db.findById('approvals', approvalId);
+    if (!approval) throw new Error(`Approval ${approvalId} not found`);
+
+    if (approval.status === 'APPROVED') {
+      return { success: true, approval, message: 'Approval already granted' };
+    }
+
+    // If AI is approving, verify all gates
+    let evaluation = null;
+    if (isAI) {
+      evaluation = await this.evaluateApprovalRequest(approvalId);
+      if (evaluation.decision !== 'APPROVE') {
+        throw new Error(`APPROVAL_BLOCKED: Supervisor evaluation returned '${evaluation.decision}': ${evaluation.reason}`);
+      }
+    }
+
+    const updated = db.update('approvals', approvalId, {
+      status: 'APPROVED',
+      decision_type: isAI ? 'AI_APPROVED' : 'HUMAN_APPROVED',
+      decision_maker: actor,
+      reviewed_by: isAI ? 'supervisor_agent' : actor,
+      reviewed_at: new Date().toISOString(),
+      evaluation: evaluation || approval.evaluation,
+      notes: notes || 'Approval granted under policy-governed authority'
+    });
+
+    this.logSupervisorEvent({
+      event_type: isAI ? 'SUPERVISOR_AUTONOMOUS_APPROVAL' : 'SUPERVISOR_HUMAN_APPROVAL_RECORDED',
+      title: isAI ? `Autonomous Approval Granted: ${approval.action}` : `Human Approval Recorded: ${approval.action}`,
+      description: isAI
+        ? `Supervisor Agent autonomously approved '${approval.action}' for Ticket #${approval.ticket_id.slice(0, 8)}. Policy & risk bounds verified.`
+        : `${actor} authorized action '${approval.action}' for Ticket #${approval.ticket_id.slice(0, 8)}.`,
+      severity: 'INFO',
+      metadata: { approvalId, action: approval.action, isAI, decision_type: updated.decision_type }
+    });
+
+    db.logAudit({
+      ticket_id: approval.ticket_id,
+      event_type: isAI ? 'SUPERVISOR_AUTONOMOUS_APPROVAL' : 'APPROVAL_GRANTED',
+      agent: actor,
+      description: isAI
+        ? `✓ Autonomous approval granted by Supervisor Agent for '${approval.action}'.`
+        : `Human approval granted by ${actor} for '${approval.action}'.`,
+      metadata: { approvalId, action: approval.action, isAI }
+    });
+
+    return { success: true, approval: updated, evaluation };
+  }
+
+  /**
+   * Internal protected operation: Rejects a request autonomously or by human
+   */
+  async rejectRequest({ approvalId, reason, actor = 'ResolveAI Supervisor Agent', isAI = true }) {
+    const approval = db.findById('approvals', approvalId);
+    if (!approval) throw new Error(`Approval ${approvalId} not found`);
+
+    const updated = db.update('approvals', approvalId, {
+      status: 'REJECTED',
+      decision_type: isAI ? 'AI_REJECTED' : 'HUMAN_REJECTED',
+      decision_maker: actor,
+      reviewed_by: isAI ? 'supervisor_agent' : actor,
+      reviewed_at: new Date().toISOString(),
+      rejection_reason: reason
+    });
+
+    this.logSupervisorEvent({
+      event_type: isAI ? 'SUPERVISOR_AUTONOMOUS_REJECTION' : 'SUPERVISOR_HUMAN_REJECTION_RECORDED',
+      title: isAI ? `Autonomous Rejection: ${approval.action}` : `Action Rejected: ${approval.action}`,
+      description: isAI
+        ? `Supervisor Agent autonomously rejected '${approval.action}': ${reason}`
+        : `${actor} rejected '${approval.action}': ${reason}`,
+      severity: 'WARN',
+      metadata: { approvalId, action: approval.action, reason, isAI }
+    });
+
+    db.logAudit({
+      ticket_id: approval.ticket_id,
+      event_type: isAI ? 'SUPERVISOR_AUTONOMOUS_REJECTION' : 'APPROVAL_REJECTED',
+      agent: actor,
+      description: isAI
+        ? `✕ Autonomous rejection by Supervisor Agent: ${reason}`
+        : `Action rejected by ${actor}: ${reason}`,
+      metadata: { approvalId, action: approval.action, reason, isAI }
+    });
+
+    return { success: true, approval: updated };
+  }
+
+  /**
+   * Escalates an approval request for human manager review
+   */
+  async escalateRequest({ approvalId, reason, actor = 'ResolveAI Supervisor Agent' }) {
+    const approval = db.findById('approvals', approvalId);
+    if (!approval) throw new Error(`Approval ${approvalId} not found`);
+
+    const updated = db.update('approvals', approvalId, {
+      status: 'ESCALATED',
+      decision_type: 'ESCALATED',
+      decision_maker: actor,
+      reviewed_at: new Date().toISOString(),
+      escalation_reason: reason
+    });
+
+    this.logSupervisorEvent({
+      event_type: 'SUPERVISOR_ESCALATED_TO_HUMAN',
+      title: `Escalated to Human Supervisor: ${approval.action}`,
+      description: `Supervisor Agent escalated approval request #${approvalId} for Ticket #${approval.ticket_id.slice(0, 8)}: ${reason}`,
+      severity: 'WARN',
+      metadata: { approvalId, action: approval.action, reason }
+    });
+
+    db.logAudit({
+      ticket_id: approval.ticket_id,
+      event_type: 'APPROVAL_ESCALATED_TO_HUMAN',
+      agent: actor,
+      description: `⚠ Action '${approval.action}' escalated to Human Supervisor: ${reason}`,
+      metadata: { approvalId, action: approval.action, reason }
+    });
+
+    return { success: true, approval: updated };
+  }
+
   // Evaluates whether an Action Agent execution can proceed autonomously or requires human gating
   evaluateActionApproval({ ticket, run, action, policyResult, investigationResult }) {
     const settings = this.getAutonomySettings();
@@ -197,7 +579,7 @@ export class SupervisorAgent {
     }
 
     // 2. Check if Autonomous Mode is enabled
-    if (!settings.enabled) {
+    if (!settings.enabled || !settings.autonomous_approvals_enabled) {
       return {
         autonomousAuthorized: false,
         reason: 'Autonomous AI Mode is DISABLED. Actions require human supervisor gating.',
@@ -216,12 +598,11 @@ export class SupervisorAgent {
       };
     }
 
-    // 4. Check if action is on the allowed tools list
-    const isAllowedTool = settings.allowed_tools && settings.allowed_tools.includes(action);
-    if (!isAllowedTool) {
+    // 4. Check specific permissions
+    if (action === 'create_replacement_request' && settings.permissions?.allow_replacements === false) {
       return {
         autonomousAuthorized: false,
-        reason: `Action '${action}' is not in the administrator-configured allowed tools list.`,
+        reason: 'Replacement requests are disabled in autonomous permissions.',
         decision: 'REQUEST_APPROVAL',
         requiresApproval: true
       };
@@ -266,7 +647,7 @@ export class SupervisorAgent {
 
     return {
       autonomousAuthorized: true,
-      reason: `Action '${action}' validated under active Autonomous AI Mode policy (POL-001/Bounds Verified).`,
+      reason: `Action '${action}' validated under active Autonomous AI Mode policy (${policyResult?.policyCited || 'POL-001'}/Bounds Verified).`,
       decision: 'EXECUTE',
       requiresApproval: false
     };

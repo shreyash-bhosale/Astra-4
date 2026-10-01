@@ -270,30 +270,146 @@ Formulate a 6-step resolution plan selecting from available agents:
       metadata: context.policyResult
     });
 
-    // Step 4: Action Agent & Supervisor Autonomy Check
+    // Step 4: Action Agent & Supervisor Autonomous Approval Architecture
     this.updateRunStepStatus(run.id, 4, 'RUNNING');
 
-    // Supervisor Agent evaluates if this action can proceed autonomously under active policy
-    const supervisorCheck = supervisorAgent.evaluateActionApproval({
-      ticket,
-      run,
-      action: context.policyResult.recommendedAction,
-      policyResult: context.policyResult,
-      investigationResult: context.investigationResult
-    });
+    let isAuthorized = Boolean(resumeFromApproval);
+    let activeApproval = null;
 
-    const isAuthorized = resumeFromApproval || supervisorCheck.autonomousAuthorized;
+    // Check if Policy Agent flagged that approval is required
+    if (context.policyResult.requiresHumanApproval && !isAuthorized) {
+      // Create Approval Request
+      activeApproval = db.insert('approvals', {
+        ticket_id: ticket.id,
+        run_id: run.id,
+        step_id: 'step-004',
+        action: context.policyResult.recommendedAction,
+        status: 'EVALUATING',
+        reason: context.policyResult.reason,
+        evidence: {
+          customerName: context.investigationResult?.customerName,
+          orderId: context.investigationResult?.orderId,
+          productName: context.investigationResult?.productName,
+          daysSinceDelivery: context.investigationResult?.daysSinceDelivery,
+          policyCited: context.policyResult.policyCited
+        },
+        requested_by: policyAgent.name
+      });
 
-    if (supervisorCheck.autonomousAuthorized) {
+      // Supervisor Agent receives the approval request
       db.logAudit({
         ticket_id: ticketId,
-        event_type: 'SUPERVISOR_AUTONOMOUS_AUTHORIZATION',
+        event_type: 'SUPERVISOR_APPROVAL_RECEIVED',
         agent: supervisorAgent.name,
-        description: `Supervisor granted autonomous execution authority for '${context.policyResult.recommendedAction}' under configured autonomy policy bounds.`,
-        metadata: { action: context.policyResult.recommendedAction, reason: supervisorCheck.reason }
+        description: `Supervisor Agent received approval request #${activeApproval.id} for action '${context.policyResult.recommendedAction}'.`,
+        metadata: { approvalId: activeApproval.id, action: context.policyResult.recommendedAction }
       });
+
+      // Supervisor Agent evaluates the approval request autonomously
+      const evaluation = await supervisorAgent.evaluateApprovalRequest(activeApproval.id);
+
+      if (evaluation.decision === 'APPROVE') {
+        // AI APPROVAL: Supervisor grants approval autonomously
+        await supervisorAgent.approveRequest({
+          approvalId: activeApproval.id,
+          actor: supervisorAgent.name,
+          isAI: true
+        });
+        isAuthorized = true;
+      } else if (evaluation.decision === 'REJECT') {
+        // AI REJECTION: Supervisor autonomously rejects ineligible action
+        await supervisorAgent.rejectRequest({
+          approvalId: activeApproval.id,
+          reason: evaluation.reason,
+          actor: supervisorAgent.name,
+          isAI: true
+        });
+
+        this.updateRunStepStatus(run.id, 4, 'REJECTED');
+
+        // Route directly to Communication Agent to formulate customer policy notification
+        this.updateRunStepStatus(run.id, 5, 'RUNNING');
+        context.communicationResult = await communicationAgent.run({
+          ticket,
+          customer,
+          order,
+          policyResult: context.policyResult,
+          actionResult: {
+            actionExecuted: 'rejection_notification',
+            status: 'REJECTED',
+            details: { reason: evaluation.reason, policyCited: evaluation.policy }
+          }
+        });
+        this.updateRunStepStatus(run.id, 5, 'COMPLETED');
+
+        db.update('tickets', ticketId, {
+          status: 'RESOLVED',
+          customer_response: context.communicationResult.customerMessage,
+          resolution_summary: `Supervisor Autonomous Decision: Action rejected. Reason: ${evaluation.reason}`
+        });
+
+        // Verification Agent conducts audit check on rejection
+        this.updateRunStepStatus(run.id, 6, 'RUNNING');
+        const verificationResult = await verificationAgent.run({
+          ticket,
+          plan: db.findById('agent_runs', run.id).plan,
+          investigationResult: context.investigationResult,
+          policyResult: context.policyResult,
+          actionResult: { actionExecuted: 'rejection', status: 'COMPLETED', details: { reason: evaluation.reason } },
+          communicationResult: context.communicationResult
+        });
+        this.updateRunStepStatus(run.id, 6, 'COMPLETED');
+        db.update('agent_runs', run.id, { status: 'COMPLETED', completed_at: new Date().toISOString() });
+
+        // Notify customer of outcome
+        emailService.notifyFinalResolution({
+          ticket,
+          customer,
+          resolutionSummary: `Supervisor Autonomous Decision: Action rejected. Reason: ${evaluation.reason}`,
+          customerMessage: context.communicationResult.customerMessage,
+          referenceId: activeApproval.id
+        }).catch(err => {
+          console.warn('[ORCHESTRATOR] Rejection notification notice:', err.message);
+        });
+
+        return {
+          status: 'REJECTED',
+          runId: run.id,
+          approvalId: activeApproval.id,
+          decision: 'REJECT',
+          reason: evaluation.reason,
+          message: `Autonomous Rejection by Supervisor Agent: ${evaluation.reason}`
+        };
+      } else {
+        // ESCALATE: Action requires Human Review
+        await supervisorAgent.escalateRequest({
+          approvalId: activeApproval.id,
+          reason: evaluation.reason,
+          actor: supervisorAgent.name
+        });
+
+        this.updateRunStepStatus(run.id, 4, 'WAITING_APPROVAL');
+        db.update('agent_runs', run.id, { status: 'WAITING_APPROVAL' });
+        db.update('tickets', ticketId, { status: 'WAITING_APPROVAL' });
+
+        // Notify supervisor via internal approval email
+        emailService.notifyApprovalRequested({ ticket, customer, approval: activeApproval }).catch(err => {
+          console.warn('[ORCHESTRATOR] Approval email notice:', err.message);
+        });
+
+        return {
+          status: 'WAITING_APPROVAL',
+          runId: run.id,
+          approvalId: activeApproval.id,
+          escalated: true,
+          decision: 'ESCALATE',
+          reason: evaluation.reason,
+          message: `Action paused. Human supervisor review required: ${evaluation.reason}`
+        };
+      }
     }
 
+    // Execute Action Agent with authorization state
     context.actionResult = await actionAgent.run({
       ticket,
       runId: run.id,
@@ -305,30 +421,10 @@ Formulate a 6-step resolution plan selecting from available agents:
 
     recordToolCall(
       context.actionResult.actionExecuted || 'action_execution',
-      { policyCited: context.policyResult.policyCited, orderId: context.investigationResult.orderId },
+      { policyCited: context.policyResult.policyCited, orderId: context.investigationResult?.orderId, autoApproved: isAuthorized },
       context.actionResult.details,
-      !context.actionResult.requiresApproval
+      true
     );
-
-    if (context.actionResult.status === 'WAITING_APPROVAL') {
-      this.updateRunStepStatus(run.id, 4, 'WAITING_APPROVAL');
-      db.update('agent_runs', run.id, { status: 'WAITING_APPROVAL' });
-
-      // Notify supervisor via internal approval requested email
-      const approval = db.findById('approvals', context.actionResult.approvalId);
-      if (approval) {
-        emailService.notifyApprovalRequested({ ticket, customer, approval }).catch(err => {
-          console.warn('[ORCHESTRATOR] Approval email notice:', err.message);
-        });
-      }
-
-      return {
-        status: 'WAITING_APPROVAL',
-        runId: run.id,
-        approvalId: context.actionResult.approvalId,
-        message: 'Action paused. Human supervisor approval required to proceed.'
-      };
-    }
 
     this.updateRunStepStatus(run.id, 4, 'COMPLETED');
 

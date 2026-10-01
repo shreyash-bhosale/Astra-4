@@ -185,6 +185,18 @@ class ApiClient {
     return this.request(`/approvals${q}`);
   }
 
+  evaluateApproval(id) {
+    return this.request(`/approvals/${id}/evaluate`, {
+      method: 'POST'
+    });
+  }
+
+  aiDecideApproval(id) {
+    return this.request(`/approvals/${id}/ai-decide`, {
+      method: 'POST'
+    });
+  }
+
   approve(id) {
     return this.request(`/approvals/${id}/approve`, {
       method: 'POST'

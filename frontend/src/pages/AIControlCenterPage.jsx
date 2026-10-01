@@ -60,22 +60,48 @@ export default function AIControlCenterPage() {
   // Editable settings draft
   const [draftRefundLimit, setDraftRefundLimit] = useState(1000);
   const [draftAllowedTools, setDraftAllowedTools] = useState([]);
+  const [draftApprovalMode, setDraftApprovalMode] = useState('HYBRID');
+  const [draftAutonomousApprovalsEnabled, setDraftAutonomousApprovalsEnabled] = useState(true);
+  const [draftPermissions, setDraftPermissions] = useState({
+    allow_replacements: true,
+    allow_shipping: true,
+    allow_notifications: true,
+    allow_status_changes: true,
+    allow_refunds: false
+  });
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Approvals & Recent Decisions
+  const [approvals, setApprovals] = useState([]);
+  const [selectedDecision, setSelectedDecision] = useState(null);
 
   const fetchData = async () => {
     try {
-      const [statusRes, agentsRes, eventsRes, settingsRes] = await Promise.all([
+      const [statusRes, agentsRes, eventsRes, settingsRes, approvalsRes] = await Promise.all([
         api.getSupervisorStatus(),
         api.getSupervisorAgents(),
         api.getSupervisorEvents(),
-        api.getAutonomySettings()
+        api.getAutonomySettings(),
+        api.getApprovals()
       ]);
       setStatusData(statusRes);
       setAgents(agentsRes);
       setEvents(eventsRes);
       setSettings(settingsRes);
+      setApprovals(approvalsRes || []);
       setDraftRefundLimit(settingsRes.refund_limit || 1000);
       setDraftAllowedTools(settingsRes.allowed_tools || []);
+      setDraftApprovalMode(settingsRes.approval_mode || 'HYBRID');
+      setDraftAutonomousApprovalsEnabled(settingsRes.autonomous_approvals_enabled !== false);
+      if (settingsRes.permissions) {
+        setDraftPermissions({
+          allow_replacements: settingsRes.permissions.allow_replacements !== false,
+          allow_shipping: settingsRes.permissions.allow_shipping !== false,
+          allow_notifications: settingsRes.permissions.allow_notifications !== false,
+          allow_status_changes: settingsRes.permissions.allow_status_changes !== false,
+          allow_refunds: settingsRes.permissions.allow_refunds === true
+        });
+      }
     } catch (err) {
       console.error('Failed to load supervisor data:', err);
       setErrorMessage(err.message || 'Failed to load supervisor data');
@@ -155,20 +181,30 @@ export default function AIControlCenterPage() {
   };
 
   const handleSaveSettings = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setSavingSettings(true);
     try {
       await api.updateAutonomySettings({
         refund_limit: Number(draftRefundLimit),
-        allowed_tools: draftAllowedTools
+        allowed_tools: draftAllowedTools,
+        approval_mode: draftApprovalMode,
+        autonomous_approvals_enabled: draftAutonomousApprovalsEnabled,
+        permissions: draftPermissions
       });
-      showToast('Autonomy policy boundaries successfully updated and persisted.');
+      showToast('Autonomous approval control policies successfully updated and persisted.');
       await fetchData();
     } catch (err) {
       setErrorMessage(err.message || 'Failed to update settings');
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const togglePermission = (key) => {
+    setDraftPermissions(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const toggleToolPermission = (toolName) => {
@@ -643,11 +679,11 @@ export default function AIControlCenterPage() {
         </div>
       </div>
 
-      {/* Policy-Bounded Permissions & Live Supervisor Event Stream Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        {/* Policy-Bounded Autonomy Permissions (Admin Only) */}
+      {/* Autonomous Approval Control & Recent AI Decisions Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+        {/* AUTONOMOUS APPROVAL CONTROL (Admin Controlled) */}
         <div style={{
-          padding: '24px',
+          padding: '26px',
           borderRadius: 'var(--radius-lg)',
           backgroundColor: 'var(--bg-primary)',
           border: '1px solid var(--border-subtle)',
@@ -655,28 +691,182 @@ export default function AIControlCenterPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldCheck size={18} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Policy-Bounded Autonomy Permissions</h2>
+              <ShieldCheck size={20} color="var(--accent-emerald)" />
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>AUTONOMOUS APPROVAL CONTROL</h2>
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'var(--bg-tertiary)' }}>
-              Server-Enforced
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              padding: '3px 10px',
+              borderRadius: 'var(--radius-pill)',
+              backgroundColor: draftAutonomousApprovalsEnabled ? '#ecfdf5' : '#f3f4f6',
+              color: draftAutonomousApprovalsEnabled ? '#047857' : '#4b5563',
+              border: `1px solid ${draftAutonomousApprovalsEnabled ? '#a7f3d0' : '#e5e7eb'}`
+            }}>
+              Supervisor Approval: {draftAutonomousApprovalsEnabled ? '● ENABLED' : '○ DISABLED'}
             </span>
           </div>
 
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginBottom: '18px', lineHeight: 1.4 }}>
+            The Supervisor Agent may evaluate, approve, or reject eligible approval requests automatically according to policy boundaries.
+          </p>
+
           <form onSubmit={handleSaveSettings}>
-            {/* Financial Limit Setting */}
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
-                Autonomous Order / Refund Limit (USD / INR)
-              </label>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Orders exceeding this amount automatically halt for human supervisor approval regardless of autonomous mode.
+            {/* Autonomous Approval Authority Toggle */}
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--bg-tertiary)',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>Supervisor Approval Authority</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Empower AI to make policy-governed approval decisions and execute actions
+                </div>
               </div>
+              <button
+                type="button"
+                disabled={!isAdmin}
+                onClick={() => setDraftAutonomousApprovalsEnabled(!draftAutonomousApprovalsEnabled)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-pill)',
+                  backgroundColor: draftAutonomousApprovalsEnabled ? '#000000' : 'var(--bg-secondary)',
+                  color: draftAutonomousApprovalsEnabled ? '#ffffff' : 'var(--text-secondary)',
+                  border: '1px solid var(--border-strong)',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  cursor: isAdmin ? 'pointer' : 'default'
+                }}
+              >
+                {draftAutonomousApprovalsEnabled ? 'Enabled' : 'Disabled'}
+              </button>
+            </div>
+
+            {/* Approval Modes Selection */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 800, marginBottom: '8px' }}>
+                GOVERNANCE APPROVAL MODE
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  {
+                    id: 'HYBRID',
+                    name: 'HYBRID (Recommended)',
+                    desc: 'Low-risk actions approved by AI • Medium-risk approved if permitted • High-risk routed to Human Manager'
+                  },
+                  {
+                    id: 'AI_APPROVAL',
+                    name: 'AI APPROVAL (Full Autonomy)',
+                    desc: 'AI evaluates policy, makes structured decision, and executes approved action immediately'
+                  },
+                  {
+                    id: 'HUMAN',
+                    name: 'HUMAN APPROVAL (Supervised)',
+                    desc: 'AI investigates and evaluates policy • Human supervisor makes the final decision'
+                  }
+                ].map(mode => (
+                  <label
+                    key={mode.id}
+                    onClick={() => isAdmin && setDraftApprovalMode(mode.id)}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: draftApprovalMode === mode.id ? '2px solid #000000' : '1px solid var(--border-subtle)',
+                      backgroundColor: draftApprovalMode === mode.id ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                      cursor: isAdmin ? 'pointer' : 'default',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="radio"
+                        name="approval_mode"
+                        checked={draftApprovalMode === mode.id}
+                        disabled={!isAdmin}
+                        onChange={() => setDraftApprovalMode(mode.id)}
+                      />
+                      <span style={{ fontWeight: 800, fontSize: '0.84rem' }}>{mode.name}</span>
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', paddingLeft: '22px' }}>
+                      {mode.desc}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Approval Permissions Checkboxes */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 800, marginBottom: '8px' }}>
+                APPROVAL PERMISSIONS (AUTONOMOUS ACTIONS)
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { key: 'allow_replacements', label: 'Replacement requests (create_replacement_request)', risk: 'Medium' },
+                  { key: 'allow_shipping', label: 'Shipping & cancellation actions (cancel_processing_order)', risk: 'Low' },
+                  { key: 'allow_notifications', label: 'Customer notification actions (send_customer_update)', risk: 'Low' },
+                  { key: 'allow_status_changes', label: 'Ticket status changes (update_ticket_status)', risk: 'Low' },
+                  { key: 'allow_refunds', label: 'Financial refunds (discretionary return review)', risk: 'High' }
+                ].map(perm => {
+                  const checked = Boolean(draftPermissions[perm.key]);
+                  return (
+                    <label
+                      key={perm.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '9px 12px',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: checked ? 'var(--bg-tertiary)' : 'transparent',
+                        border: '1px solid var(--border-light)',
+                        cursor: isAdmin ? 'pointer' : 'default',
+                        fontSize: '0.82rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!isAdmin}
+                          onChange={() => togglePermission(perm.key)}
+                        />
+                        <span style={{ fontWeight: 600 }}>{perm.label}</span>
+                      </div>
+                      <span style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: 'var(--radius-pill)',
+                        backgroundColor: perm.risk === 'High' ? '#fef2f2' : perm.risk === 'Medium' ? '#fffbeb' : '#ecfdf5',
+                        color: perm.risk === 'High' ? '#dc2626' : perm.risk === 'Medium' ? '#b45309' : '#047857'
+                      }}>
+                        {perm.risk} Risk
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Financial Refund Limit */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 800, marginBottom: '6px' }}>
+                AUTONOMOUS FINANCIAL CEILING (USD / INR)
+              </label>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {[250, 500, 1000, 2500].map((amt) => (
+                {[250, 500, 1000, 2500].map(amt => (
                   <button
                     key={amt}
                     type="button"
+                    disabled={!isAdmin}
                     onClick={() => setDraftRefundLimit(amt)}
                     style={{
                       flex: 1,
@@ -685,7 +875,8 @@ export default function AIControlCenterPage() {
                       border: draftRefundLimit === amt ? '2px solid #000000' : '1px solid var(--border-subtle)',
                       backgroundColor: draftRefundLimit === amt ? 'var(--bg-secondary)' : 'var(--bg-primary)',
                       fontWeight: draftRefundLimit === amt ? 800 : 500,
-                      fontSize: '0.82rem'
+                      fontSize: '0.82rem',
+                      cursor: isAdmin ? 'pointer' : 'default'
                     }}
                   >
                     ${amt}
@@ -694,64 +885,19 @@ export default function AIControlCenterPage() {
               </div>
             </div>
 
-            {/* Allowed Operational Tools */}
-            <div style={{ marginBottom: '18px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
-                Allowed Operational Tools (When Autonomous Mode Active)
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { name: 'create_replacement_request', label: 'Create Replacement Shipment (POL-001)', risk: 'Medium' },
-                  { name: 'cancel_processing_order', label: 'Cancel Processing Order (POL-002)', risk: 'Low' },
-                  { name: 'send_customer_update', label: 'Dispatch Verified Customer Email', risk: 'Low' },
-                  { name: 'update_ticket_status', label: 'Update Ticket & Resolution State', risk: 'Low' },
-                  { name: 'search_policies', label: 'Search Corporate Policy Engine', risk: 'Low' }
-                ].map((tool) => {
-                  const checked = draftAllowedTools.includes(tool.name);
-                  return (
-                    <label
-                      key={tool.name}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: checked ? 'var(--bg-tertiary)' : 'transparent',
-                        border: '1px solid var(--border-light)',
-                        cursor: isAdmin ? 'pointer' : 'default',
-                        fontSize: '0.8rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={!isAdmin}
-                          onChange={() => toggleToolPermission(tool.name)}
-                        />
-                        <span style={{ fontWeight: 600 }}>{tool.label}</span>
-                      </div>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{tool.risk} Risk</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Permanently Restricted Safety Bounds */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
-                Permanently Restricted Actions (Always Blocked)
+            {/* Permanently Restricted Boundaries */}
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, marginBottom: '6px', color: '#b91c1c' }}>
+                PERMANENTLY RESTRICTED (ALWAYS ESCALATED)
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {[
-                  'modify_authentication',
-                  'modify_user_permissions',
-                  'delete_customer_account',
-                  'access_system_secrets',
-                  'bypass_verification'
-                ].map((item) => (
+                  'Financial refunds over limit',
+                  'Account/security changes',
+                  'Permission modifications',
+                  'Access system secrets',
+                  'Bypass verification gates'
+                ].map(item => (
                   <span
                     key={item}
                     style={{
@@ -779,60 +925,224 @@ export default function AIControlCenterPage() {
                 type="submit"
                 disabled={savingSettings}
                 className="btn-primary"
-                style={{ width: '100%', height: '40px', fontSize: '0.85rem' }}
+                style={{ width: '100%', height: '42px', fontSize: '0.88rem' }}
               >
-                {savingSettings ? 'Persisting Policies...' : 'Save Autonomy Policy Boundaries'}
+                {savingSettings ? 'Persisting Policy Boundaries...' : 'Save Autonomous Approval Settings'}
               </button>
             )}
           </form>
         </div>
 
-        {/* Real-Time Supervisor Event Stream */}
-        <div style={{
-          padding: '24px',
-          borderRadius: 'var(--radius-lg)',
-          backgroundColor: 'var(--bg-primary)',
-          border: '1px solid var(--border-subtle)',
-          boxShadow: 'var(--shadow-subtle)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={18} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Supervisor Operational Event Stream</h2>
+        {/* RECENT AI DECISIONS & SUPERVISOR EVENT STREAM */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Recent AI Decisions Feed */}
+          <div style={{
+            padding: '24px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: 'var(--shadow-subtle)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Zap size={18} color="var(--accent-emerald)" />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Recent AI Decisions (Audit Trail)</h2>
+              </div>
+              <button
+                onClick={() => navigate('/approvals')}
+                style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <span>View all ({approvals.length})</span>
+                <ArrowRight size={13} />
+              </button>
             </div>
-            <button onClick={fetchData} style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <RefreshCw size={13} />
-            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {approvals.slice(0, 4).map((appr) => {
+                const isApproved = appr.status === 'APPROVED' || appr.decision_type === 'AI_APPROVED';
+                const isRejected = appr.status === 'REJECTED' || appr.decision_type === 'AI_REJECTED';
+                const isEscalated = appr.status === 'PENDING' || appr.status === 'ESCALATED';
+
+                return (
+                  <div
+                    key={appr.id}
+                    onClick={() => setSelectedDecision(appr)}
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {isApproved ? (
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem' }}>
+                          ✓
+                        </div>
+                      ) : isRejected ? (
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem' }}>
+                          ✕
+                        </div>
+                      ) : (
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#fffbeb', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem' }}>
+                          ↗
+                        </div>
+                      )}
+
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.84rem' }}>
+                          {isApproved ? 'Approved' : isRejected ? 'Rejected' : 'Escalated'} — {appr.action?.replace(/_/g, ' ')}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          Ticket #{appr.ticket_id} • {appr.decision_maker || 'ResolveAI Supervisor Agent'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {new Date(appr.reviewed_at || appr.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                        Inspect dossier →
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: '420px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {events.map((ev, i) => (
-              <div
-                key={ev.id || i}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--bg-tertiary)',
-                  borderLeft: `4px solid ${ev.severity === 'CRITICAL' ? '#ef4444' : ev.severity === 'WARN' ? '#f59e0b' : '#000000'}`,
-                  fontSize: '0.8rem'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{ev.title || ev.event_type}</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    {ev.created_at ? new Date(ev.created_at).toLocaleTimeString() : 'Just now'}
-                  </span>
-                </div>
-                <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  {ev.description}
-                </div>
+          {/* Supervisor Operational Event Stream */}
+          <div style={{
+            padding: '24px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: 'var(--shadow-subtle)',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={18} />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Supervisor Operational Event Stream</h2>
               </div>
-            ))}
+              <button onClick={fetchData} style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                <RefreshCw size={13} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', maxHeight: '280px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {events.map((ev, i) => (
+                <div
+                  key={ev.id || i}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderLeft: `4px solid ${ev.severity === 'CRITICAL' ? '#ef4444' : ev.severity === 'WARN' ? '#f59e0b' : '#000000'}`,
+                    fontSize: '0.78rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>{ev.title || ev.event_type}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                      {ev.created_at ? new Date(ev.created_at).toLocaleTimeString() : 'Just now'}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                    {ev.description}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Selected Decision Detail Drawer/Modal */}
+      {selectedDecision && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 160,
+          padding: '20px'
+        }}>
+          <div style={{
+            maxWidth: '560px',
+            width: '100%',
+            backgroundColor: 'var(--bg-primary)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '28px',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border-subtle)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)' }}>AUDIT RECORD #{selectedDecision.id}</span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, marginTop: '2px' }}>
+                  {selectedDecision.action?.replace(/_/g, ' ').toUpperCase()}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedDecision(null)}
+                style={{ fontSize: '0.8rem', fontWeight: 700 }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem', marginBottom: '20px' }}>
+              <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)' }}>
+                <strong>Decision:</strong> {selectedDecision.status} ({selectedDecision.decision_type || 'AI_APPROVED'})
+              </div>
+              <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)' }}>
+                <strong>Decision Authority:</strong> {selectedDecision.decision_maker || 'ResolveAI Supervisor Agent'}
+              </div>
+              <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)' }}>
+                <strong>Policy Citations:</strong> {selectedDecision.evidence?.policyCited || 'POL-001 (Damaged Product Replacement Policy)'}
+              </div>
+              <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)' }}>
+                <strong>Rationale:</strong> {selectedDecision.reason || selectedDecision.rejection_reason || 'Customer and order satisfy corporate replacement warranty terms.'}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  const tid = selectedDecision.ticket_id;
+                  setSelectedDecision(null);
+                  navigate(`/tickets/${tid}`);
+                }}
+                className="btn-secondary"
+                style={{ height: '38px', fontSize: '0.82rem' }}
+              >
+                <span>Inspect Ticket #{selectedDecision.ticket_id}</span>
+                <ExternalLink size={13} />
+              </button>
+              <button
+                onClick={() => setSelectedDecision(null)}
+                className="btn-primary"
+                style={{ height: '38px', fontSize: '0.82rem' }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal for Enabling Autonomous Mode */}
       {showEnableModal && (

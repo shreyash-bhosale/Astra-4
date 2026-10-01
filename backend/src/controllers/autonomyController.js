@@ -29,6 +29,7 @@ export const enableAutonomousMode = async (req, res, next) => {
       enabled: true,
       paused: false,
       emergency_stopped: false,
+      autonomous_approvals_enabled: true,
       note: `Autonomous AI Mode explicitly activated by ${req.user.name}`
     }, req.user);
 
@@ -47,6 +48,7 @@ export const disableAutonomousMode = async (req, res, next) => {
     const updated = supervisorAgent.updateAutonomySettings({
       enabled: false,
       paused: false,
+      autonomous_approvals_enabled: false,
       note: `Autonomous AI Mode disabled by ${req.user.name}. Reverted to human-supervised gating.`
     }, req.user);
 
