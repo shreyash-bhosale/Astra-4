@@ -13,7 +13,6 @@ import {
   Bell,
   LogOut,
   ChevronRight,
-  Shield,
   Sparkles
 } from 'lucide-react';
 
@@ -394,28 +393,6 @@ export default function CustomerLayout({ children }) {
 
             <ThemeToggle />
 
-            {/* Evaluator Quick Switcher to Staff/Manager Dashboard */}
-            <Link
-              to="/dashboard"
-              title="Switch to Staff & Manager Command Center"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 10px',
-                borderRadius: 'var(--radius-pill)',
-                backgroundColor: 'var(--bg-tertiary)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                textDecoration: 'none'
-              }}
-            >
-              <Shield size={13} color="var(--accent-amber)" />
-              <span className="customer-staff-toggle-text">Staff Console</span>
-            </Link>
-
             <button
               onClick={() => {
                 logout('/customer/login');
@@ -493,9 +470,6 @@ export default function CustomerLayout({ children }) {
           }
           .customer-mobile-bottom-nav {
             display: flex !important;
-          }
-          .customer-staff-toggle-text {
-            display: none;
           }
         }
       `}</style>
