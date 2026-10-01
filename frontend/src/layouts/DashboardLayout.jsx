@@ -220,12 +220,20 @@ export default function DashboardLayout({ children }) {
             backgroundColor: 'var(--bg-tertiary)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            gap: '8px'
           }}
         >
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-              {user?.name || 'Support Agent'}
+          <div
+            onClick={() => navigate('/settings?tab=profile')}
+            style={{ overflow: 'hidden', cursor: 'pointer', flex: 1 }}
+            title="Edit Admin Profile & Details"
+          >
+            <div style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>{user?.name || 'Support Agent'}</span>
+              <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-blue)', fontWeight: 700 }}>
+                Edit
+              </span>
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
               Role: {user?.role || 'agent'}
@@ -237,7 +245,12 @@ export default function DashboardLayout({ children }) {
             style={{
               padding: '6px',
               borderRadius: 'var(--radius-sm)',
-              color: 'var(--text-muted)'
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center'
             }}
           >
             <LogOut size={16} />

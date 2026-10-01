@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -19,12 +20,21 @@ import {
   LogOut,
   Upload,
   Mail,
-  Send
+  Send,
+  User,
+  Lock,
+  KeyRound,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { user, logout, updateUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    tabParam === 'profile' || tabParam === 'admin_profile' ? 'admin_profile' : (tabParam || 'overview')
+  );
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,6 +72,113 @@ export default function SettingsPage() {
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState(null);
   const [testEmailRecipient, setTestEmailRecipient] = useState('shreyashbiit1508@gmail.com');
+
+  // Admin / Staff Profile form state
+  const [adminProfileData, setAdminProfileData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    department: user?.department || (user?.role === 'admin' ? 'Executive Operations & System Security' : 'Customer Care & Logistics Operations'),
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminToast, setAdminToast] = useState('');
+  const [adminError, setAdminError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setAdminProfileData(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone,
+        department: user.department || prev.department
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'profile' || tab === 'admin_profile') {
+      setActiveTab('admin_profile');
+    } else if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleAdminFieldChange = (field, value) => {
+    setAdminProfileData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveAdminProfile = async (e) => {
+    if (e) e.preventDefault();
+    setAdminSaving(true);
+    setAdminError('');
+    setAdminToast('');
+
+    try {
+      const cleanName = (adminProfileData.name || '').trim();
+      const cleanEmail = (adminProfileData.email || '').trim().toLowerCase();
+
+      if (!cleanName || cleanName.length < 2) {
+        throw new Error('Admin username / name must be at least 2 characters long.');
+      }
+      if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        throw new Error('Please enter a valid administrator email address.');
+      }
+
+      if (showPasswordFields && adminProfileData.newPassword) {
+        if (!adminProfileData.currentPassword) {
+          throw new Error('Current password is required to verify your authorization before setting a new password.');
+        }
+        if (adminProfileData.newPassword.length < 6) {
+          throw new Error('New password must be at least 6 characters long.');
+        }
+        if (adminProfileData.newPassword !== adminProfileData.confirmPassword) {
+          throw new Error('New passwords do not match. Please re-enter.');
+        }
+      }
+
+      const payload = {
+        name: cleanName,
+        email: cleanEmail,
+        phone: (adminProfileData.phone || '').trim(),
+        department: (adminProfileData.department || '').trim()
+      };
+
+      if (showPasswordFields && adminProfileData.newPassword) {
+        payload.currentPassword = adminProfileData.currentPassword;
+        payload.newPassword = adminProfileData.newPassword;
+      }
+
+      const res = await api.updateProfile(payload);
+      if (res?.user && updateUser) {
+        updateUser(res.user);
+      }
+
+      setAdminProfileData(prev => ({
+        ...prev,
+        name: res?.user?.name || cleanName,
+        email: res?.user?.email || cleanEmail,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+      setShowPasswordFields(false);
+      setAdminToast('Admin profile and identity details updated successfully!');
+      setTimeout(() => setAdminToast(''), 4500);
+    } catch (err) {
+      setAdminError(err.message || 'Failed to update admin profile');
+    } finally {
+      setAdminSaving(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -196,6 +313,7 @@ export default function SettingsPage() {
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: <Layers size={17} /> },
+    { id: 'admin_profile', label: 'Admin Profile & Details', icon: <User size={17} /> },
     { id: 'general', label: 'General & Workspace', icon: <Building size={17} /> },
     { id: 'ai', label: 'AI & Automation', icon: <Cpu size={17} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={17} /> },
@@ -397,6 +515,30 @@ export default function SettingsPage() {
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
               Role: <strong style={{ color: 'var(--accent-blue)' }}>{user?.role || 'Staff'}</strong>
             </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('admin_profile')}
+              style={{
+                marginTop: '12px',
+                width: '100%',
+                padding: '6px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                backgroundColor: activeTab === 'admin_profile' ? 'var(--accent-blue)' : 'var(--bg-primary)',
+                color: activeTab === 'admin_profile' ? '#ffffff' : 'var(--text-primary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all var(--transition-fast)'
+              }}
+            >
+              <User size={13} />
+              <span>Edit Details</span>
+            </button>
           </div>
         </aside>
 
@@ -498,6 +640,339 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ================================================================
+              TAB: ADMIN PROFILE & IDENTITY DETAILS
+              ================================================================ */}
+          {activeTab === 'admin_profile' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* Toast Alerts for Admin Profile */}
+              {adminToast && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '14px 20px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--status-res-bg)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: 'var(--status-res-text)',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    animation: 'fadeIn 0.25s ease'
+                  }}
+                >
+                  <CheckCircle2 size={18} />
+                  <span>{adminToast}</span>
+                </div>
+              )}
+
+              {adminError && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '14px 20px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    fontSize: '0.9rem',
+                    fontWeight: 600
+                  }}
+                >
+                  <AlertCircle size={18} />
+                  <span>{adminError}</span>
+                </div>
+              )}
+
+              {/* Header / Identity Banner */}
+              <div className="settings-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div
+                    style={{
+                      width: '68px',
+                      height: '68px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      border: '2px solid var(--border-strong)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.6rem',
+                      fontWeight: 800,
+                      boxShadow: 'var(--shadow-card)'
+                    }}
+                  >
+                    {(adminProfileData.name || user?.name || 'A')[0]}
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
+                        {adminProfileData.name || user?.name || 'Administrator'}
+                      </h2>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-pill)',
+                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                          color: 'var(--accent-blue)',
+                          letterSpacing: '0.04em'
+                        }}
+                      >
+                        {user?.role || 'Staff Operator'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      {adminProfileData.email || user?.email} • {adminProfileData.department || 'Operations Team'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 12px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      color: 'var(--accent-emerald)'
+                    }}
+                  >
+                    <ShieldCheck size={14} />
+                    <span>Active Session Verified</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Edit Details Form */}
+              <form onSubmit={handleSaveAdminProfile} className="settings-card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <User size={18} color="var(--accent-blue)" />
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
+                    Administrator Details & Identity
+                  </h3>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '24px' }}>
+                  Update your staff username, login email, and operational department. Changes are immediately synchronized to database records and activity audit logs.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                  {/* Name / Username */}
+                  <div>
+                    <label className="settings-label">ADMIN USERNAME / FULL NAME</label>
+                    <div className="settings-helper">Your display identity stamped on ticket actions, AI approvals, and supervisor overrides.</div>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={adminProfileData.name}
+                      onChange={(e) => handleAdminFieldChange('name', e.target.value)}
+                      placeholder="e.g. Sarah Chen (Admin)"
+                      required
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="settings-label">LOGIN & NOTIFICATION EMAIL</label>
+                    <div className="settings-helper">Official email used for staff console authentication and emergency alerts.</div>
+                    <input
+                      type="email"
+                      className="settings-input"
+                      value={adminProfileData.email}
+                      onChange={(e) => handleAdminFieldChange('email', e.target.value)}
+                      placeholder="e.g. admin@resolveai.io"
+                      required
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="settings-label">DIRECT PHONE / EMERGENCY CONTACT</label>
+                    <div className="settings-helper">Optional contact number for high-priority outage or security notifications.</div>
+                    <input
+                      type="tel"
+                      className="settings-input"
+                      value={adminProfileData.phone}
+                      onChange={(e) => handleAdminFieldChange('phone', e.target.value)}
+                      placeholder="+1 (415) 555-0100"
+                    />
+                  </div>
+
+                  {/* Department */}
+                  <div>
+                    <label className="settings-label">OPERATIONAL UNIT / DEPARTMENT</label>
+                    <div className="settings-helper">Primary team assignment within internal ResolveAI staff operations.</div>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={adminProfileData.department}
+                      onChange={(e) => handleAdminFieldChange('department', e.target.value)}
+                      placeholder="e.g. Executive Operations & Platform Security"
+                    />
+                  </div>
+
+                  {/* Role (Read Only) */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="settings-label">ACCESS ROLE & PRIVILEGE TIER</label>
+                    <div className="settings-helper">Configured by internal system security policy. Cannot be self-modified.</div>
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '10px'
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+                          {user?.role || 'Staff Operator'}
+                        </span>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {user?.role === 'admin'
+                            ? 'Full administrative authority: Autonomy controls, approvals, security policies, system resets.'
+                            : 'Manager authority: Supervisor telemetry, ticket workflows, and operational approvals.'}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: 'var(--radius-pill)',
+                          backgroundColor: '#ecfdf5',
+                          color: '#059669'
+                        }}
+                      >
+                        ✓ Authorized
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collapsible Password Change Section */}
+                <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Security Credentials & Password</div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Update your login password to maintain high account security.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordFields(prev => !prev)}
+                      className="btn-secondary"
+                      style={{ height: '34px', fontSize: '0.8rem', paddingInline: '14px' }}
+                    >
+                      {showPasswordFields ? 'Cancel Password Change' : 'Change Password'}
+                    </button>
+                  </div>
+
+                  {showPasswordFields && (
+                    <div
+                      style={{
+                        padding: '20px',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                        gap: '16px',
+                        animation: 'fadeIn 0.2s ease'
+                      }}
+                    >
+                      <div>
+                        <label className="settings-label">CURRENT PASSWORD</label>
+                        <input
+                          type="password"
+                          className="settings-input"
+                          value={adminProfileData.currentPassword}
+                          onChange={(e) => handleAdminFieldChange('currentPassword', e.target.value)}
+                          placeholder="••••••••••••"
+                          autoComplete="current-password"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="settings-label">NEW PASSWORD (MIN. 6 CHARACTERS)</label>
+                        <input
+                          type="password"
+                          className="settings-input"
+                          value={adminProfileData.newPassword}
+                          onChange={(e) => handleAdminFieldChange('newPassword', e.target.value)}
+                          placeholder="••••••••••••"
+                          autoComplete="new-password"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="settings-label">CONFIRM NEW PASSWORD</label>
+                        <input
+                          type="password"
+                          className="settings-input"
+                          value={adminProfileData.confirmPassword}
+                          onChange={(e) => handleAdminFieldChange('confirmPassword', e.target.value)}
+                          placeholder="••••••••••••"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Bar */}
+                <div style={{ marginTop: '28px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminProfileData({
+                        name: user?.name || '',
+                        email: user?.email || '',
+                        phone: user?.phone || '',
+                        department: user?.department || '',
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: ''
+                      });
+                      setShowPasswordFields(false);
+                      setAdminError('');
+                    }}
+                    className="btn-secondary"
+                    style={{ height: '42px', paddingInline: '20px', fontSize: '0.85rem' }}
+                  >
+                    Reset Form
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={adminSaving}
+                    className="btn-primary"
+                    style={{ height: '42px', paddingInline: '24px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Save size={16} />
+                    <span>{adminSaving ? 'Saving Updates...' : 'Save Admin Details'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 

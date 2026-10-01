@@ -301,6 +301,8 @@ export class Repository {
           if (payload.assigned_user_id && !this.findById('users', payload.assigned_user_id)) {
             payload.assigned_user_id = null;
           }
+        } else if (tableName === 'users') {
+          delete payload.department;
         }
       }
 

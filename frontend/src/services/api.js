@@ -164,6 +164,21 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  async updateProfile(profileData) {
+    const res = await this.request('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(profileData)
+    });
+    if (res?.token) {
+      this.setToken(res.token);
+    }
+    return res;
+  }
+
+  updateAdminProfile(profileData) {
+    return this.updateProfile(profileData);
+  }
+
   // Tickets
   getTickets(params = {}) {
     const query = new URLSearchParams(params).toString();

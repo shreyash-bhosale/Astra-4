@@ -362,6 +362,27 @@ export function handleClientMock(endpoint, options = {}) {
 
   // Auth: /auth/me
   if (endpoint === '/auth/me') {
+    if (method === 'PATCH' || method === 'PUT') {
+      let currentUser = null;
+      try {
+        const saved = localStorage.getItem('resolveai_current_user');
+        if (saved) currentUser = JSON.parse(saved);
+      } catch (e) {}
+
+      let targetUser = store.users.find(u => u.email.toLowerCase() === (currentUser?.email || '').toLowerCase()) || store.users[0];
+      if (body.name) targetUser.name = body.name.trim();
+      if (body.email) targetUser.email = body.email.trim().toLowerCase();
+      if (body.phone !== undefined) targetUser.phone = body.phone;
+      if (body.department !== undefined) targetUser.department = body.department;
+      if (body.newPassword) targetUser.password = body.newPassword;
+
+      saveStorage(store);
+      try {
+        localStorage.setItem('resolveai_current_user', JSON.stringify(targetUser));
+      } catch (e) {}
+      return { success: true, message: 'Account details successfully updated.', user: targetUser, token: 'mock-jwt-demo-token' };
+    }
+
     try {
       const saved = localStorage.getItem('resolveai_current_user');
       if (saved) {

@@ -296,8 +296,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (userData) => {
+    setUser(prev => {
+      const updated = { ...prev, ...userData };
+      try {
+        localStorage.setItem('resolveai_current_user', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithDemo, register, forgotPassword, resetPassword, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithDemo, register, forgotPassword, resetPassword, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

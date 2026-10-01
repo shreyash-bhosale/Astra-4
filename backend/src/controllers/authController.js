@@ -248,7 +248,145 @@ export const login = async (req, res, next) => {
 };
 
 export const getMe = async (req, res) => {
-  return res.json({ user: req.user });
+  const sessionUser = req.user ? (db.findById('users', req.user.id) || req.user) : null;
+  return res.json({
+    user: sessionUser ? {
+      id: sessionUser.id,
+      name: sessionUser.name,
+      email: sessionUser.email,
+      phone: sessionUser.phone || null,
+      department: sessionUser.department || null,
+      role: sessionUser.role,
+      customerId: req.user?.customerId || null
+    } : null
+  });
+};
+
+export const updateMe = async (req, res, next) => {
+  try {
+    const sessionUserId = req.user?.id;
+    if (!sessionUserId) {
+      return res.status(401).json({ error: 'Unauthorized: Authentication required.' });
+    }
+
+    let user = db.findById('users', sessionUserId) ||
+               db.findOne('users', u => u.email.toLowerCase() === req.user.email?.toLowerCase());
+
+    if (!user) {
+      return res.status(404).json({ error: 'User account not found.' });
+    }
+
+    const { name, email, phone, department, currentPassword, newPassword } = req.body;
+    const updates = {};
+
+    if (name !== undefined) {
+      const cleanName = String(name).trim();
+      if (cleanName.length < 2) {
+        return res.status(400).json({ error: 'Username/Name must be at least 2 characters.' });
+      }
+      updates.name = cleanName;
+    }
+
+    if (email !== undefined) {
+      const cleanEmail = String(email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
+      if (cleanEmail !== user.email.toLowerCase()) {
+        const existing = db.findOne('users', u => u.email.toLowerCase() === cleanEmail && u.id !== user.id);
+        if (existing) {
+          return res.status(400).json({ error: 'This email is already in use by another account.' });
+        }
+        updates.email = cleanEmail;
+      }
+    }
+
+    if (phone !== undefined) {
+      updates.phone = String(phone).trim() || null;
+    }
+
+    if (department !== undefined) {
+      updates.department = String(department).trim() || null;
+    }
+
+    // Optional password update
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required to set a new password.' });
+      }
+      if (String(newPassword).length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+      }
+      const isValid = bcrypt.compareSync(currentPassword, user.password_hash);
+      if (!isValid) {
+        return res.status(400).json({ error: 'Current password verification failed.' });
+      }
+      const salt = bcrypt.genSaltSync(10);
+      updates.password_hash = bcrypt.hashSync(newPassword, salt);
+    }
+
+    const updatedUser = db.update('users', user.id, updates);
+
+    // Also update Supabase Auth metadata if configured
+    const supabase = getSupabaseClient();
+    if (supabase && (updates.name || updates.phone || updates.email || updates.password_hash)) {
+      try {
+        const supaUpdates = {
+          user_metadata: {
+            name: updatedUser.name,
+            phone: updatedUser.phone || '',
+            department: updatedUser.department || ''
+          }
+        };
+        if (updates.email) supaUpdates.email = updates.email;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+        if (isUuid) {
+          await supabase.auth.admin.updateUserById(user.id, supaUpdates);
+        }
+      } catch (supaErr) {
+        console.warn('[AUTH] Supabase admin updateUserById notice:', supaErr.message);
+      }
+    }
+
+    // Generate refreshed JWT token with updated profile
+    const token = jwt.sign(
+      {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        department: updatedUser.department,
+        customerId: req.user.customerId || null
+      },
+      config.jwtSecret,
+      { expiresIn: '7d' }
+    );
+
+    // Audit log
+    db.logAudit({
+      ticket_id: null,
+      event_type: 'STAFF_PROFILE_UPDATED',
+      agent: updatedUser.name,
+      description: `Staff operator ${updatedUser.name} (${updatedUser.role}) updated their profile details`,
+      metadata: { fieldsUpdated: Object.keys(updates) }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Account details successfully updated.',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        department: updatedUser.department,
+        role: updatedUser.role
+      },
+      token
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 export const forgotPassword = async (req, res, next) => {
