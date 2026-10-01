@@ -1,19 +1,32 @@
 import jwt from 'jsonwebtoken';
 import { config } from './src/config/env.js';
+import { app } from './src/server.js';
 
 async function testWorkflowEmailDispatch() {
-  console.log('Testing End-to-End Autonomous Email Flow in Orchestrator...\n');
-  const base = 'http://localhost:5001';
+  let base = 'http://localhost:5001';
+  let server = null;
+  try {
+    const ping = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(800) });
+    if (!ping.ok) throw new Error();
+  } catch (e) {
+    server = await new Promise(resolve => {
+      const s = app.listen(0, () => resolve(s));
+    });
+    base = `http://localhost:${server.address().port}`;
+  }
 
-  const token = jwt.sign(
-    { id: 'usr-manager-01', email: 'manager@resolveai.io', role: 'manager' },
-    config.jwtSecret,
-    { expiresIn: '1h' }
-  );
-  const authHeaders = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
+  console.log(`Testing End-to-End Autonomous Email Flow in Orchestrator on ${base}...\n`);
+
+  try {
+    const token = jwt.sign(
+      { id: 'usr-manager-01', email: 'manager@resolveai.io', role: 'manager' },
+      config.jwtSecret,
+      { expiresIn: '1h' }
+    );
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
 
   // 1. Create a fresh ticket for Elena Rostova
   console.log('1. Creating fresh test ticket for customer elena.rostova@acmecorp.com...');
@@ -49,6 +62,10 @@ async function testWorkflowEmailDispatch() {
   const emailsRes = await fetch(`${base}/api/tickets/${ticket.id}/emails`, {
     headers: authHeaders
   });
+  if (!emailsRes.ok) {
+    const errText = await emailsRes.text();
+    throw new Error(`GET /emails returned HTTP ${emailsRes.status}: ${errText}`);
+  }
   const emails = await emailsRes.json();
   console.log(`✓ Dispatched ${emails.length} total notifications:`);
   emails.forEach(e => {
@@ -83,6 +100,11 @@ async function testWorkflowEmailDispatch() {
   console.log('\n====================================================');
   console.log('ORCHESTRATOR AUTONOMOUS EMAIL DISPATCH VERIFIED!');
   console.log('====================================================');
+  } finally {
+    if (server) {
+      server.close();
+    }
+  }
 }
 
 testWorkflowEmailDispatch().catch(err => {

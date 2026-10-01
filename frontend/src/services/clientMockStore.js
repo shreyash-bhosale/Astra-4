@@ -187,13 +187,83 @@ const SEED_DATA = {
       created_at: '2026-09-28T16:01:00.000Z',
       sent_at: '2026-09-28T16:01:01.000Z'
     }
+  ],
+  autonomy_settings: {
+    id: 'autonomy-config',
+    enabled: true,
+    paused: false,
+    emergency_stopped: false,
+    refund_limit: 1000,
+    allowed_tools: [
+      'get_customer',
+      'get_order',
+      'get_customer_orders',
+      'get_ticket_history',
+      'search_policies',
+      'update_ticket_status',
+      'create_internal_task',
+      'create_replacement_request',
+      'cancel_processing_order',
+      'send_customer_update',
+      'send_customer_update_email',
+      'verify_resolution'
+    ],
+    restricted_tools: [
+      'modify_authentication',
+      'modify_user_permissions',
+      'delete_customer_account',
+      'modify_security_settings',
+      'access_system_secrets',
+      'bypass_verification'
+    ],
+    approval_mode: 'HYBRID',
+    autonomous_approvals_enabled: true,
+    permissions: {
+      allow_replacements: true,
+      allow_shipping: true,
+      allow_notifications: true,
+      allow_status_changes: true,
+      allow_refunds: false
+    },
+    updated_at: new Date().toISOString()
+  },
+  supervisor_events: [
+    {
+      id: 'sup-1',
+      event_type: 'AUTONOMOUS_AUTHORIZATION_GRANTED',
+      title: 'Autonomous Authority Granted',
+      description: 'Supervisor authorized create_replacement_request under POL-001 within configured autonomy bounds.',
+      severity: 'INFO',
+      created_at: new Date(Date.now() - 120000).toISOString()
+    },
+    {
+      id: 'sup-2',
+      event_type: 'POLICY_BOUNDARY_VERIFIED',
+      title: 'Safety Constraints Active',
+      description: 'Allowlisted tools locked to 12 endpoints. High-risk destructive tools permanently blocked.',
+      severity: 'INFO',
+      created_at: new Date(Date.now() - 3600000).toISOString()
+    }
   ]
 };
 
 function getStorage() {
   try {
     const raw = localStorage.getItem('resolveai_demo_store');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      let needsSave = false;
+      if (!parsed.autonomy_settings) {
+        parsed.autonomy_settings = JSON.parse(JSON.stringify(SEED_DATA.autonomy_settings));
+        needsSave = true;
+      }
+      if (!parsed.supervisor_events) {
+        parsed.supervisor_events = JSON.parse(JSON.stringify(SEED_DATA.supervisor_events));
+        needsSave = true;
+      }
+      if (needsSave) saveStorage(parsed);
+      return parsed;
+    }
   } catch (e) {}
   const fresh = JSON.parse(JSON.stringify(SEED_DATA));
   saveStorage(fresh);
@@ -508,13 +578,16 @@ export function handleClientMock(endpoint, options = {}) {
   }
   // Supervisor Agent & AI Control Center
   if (endpoint === '/supervisor/status') {
+    const s = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    const isAuto = s.enabled && !s.paused && !s.emergency_stopped;
+    const mode = s.emergency_stopped ? 'EMERGENCY_STOPPED' : s.paused ? 'PAUSED' : isAuto ? 'AUTONOMOUS' : 'SUPERVISED';
     return {
       supervisor: {
         name: 'ResolveAI Supervisor Agent',
         badge: '◈',
-        status: 'ACTIVE',
-        mode: 'AUTONOMOUS',
-        emergencyStopped: false
+        status: s.emergency_stopped ? 'EMERGENCY_STOPPED' : s.paused ? 'PAUSED' : 'ACTIVE',
+        mode,
+        emergencyStopped: !!s.emergency_stopped
       },
       fleetHealth: { totalAgents: 8, healthyCount: 8, allHealthy: true },
       telemetry: {
@@ -523,14 +596,7 @@ export function handleClientMock(endpoint, options = {}) {
         totalCasesCount: store.tickets.length,
         resolvedCasesCount: store.tickets.filter(t => t.status === 'RESOLVED').length
       },
-      settings: {
-        id: 'autonomy-config',
-        enabled: true,
-        paused: false,
-        emergency_stopped: false,
-        refund_limit: 1000,
-        allowed_tools: ['get_customer', 'get_order', 'search_policies', 'create_replacement_request', 'send_customer_update', 'verify_resolution']
-      }
+      settings: s
     };
   }
 
@@ -548,34 +614,168 @@ export function handleClientMock(endpoint, options = {}) {
   }
 
   if (endpoint === '/supervisor/events') {
-    return [
-      { id: 'sup-1', event_type: 'AUTONOMOUS_AUTHORIZATION_GRANTED', title: 'Autonomous Authority Granted', description: 'Supervisor authorized create_replacement_request under POL-001 within configured autonomy bounds.', severity: 'INFO', created_at: new Date(Date.now() - 120000).toISOString() },
-      { id: 'sup-2', event_type: 'POLICY_BOUNDARY_VERIFIED', title: 'Safety Constraints Active', description: 'Allowlisted tools locked to 12 endpoints. High-risk destructive tools permanently blocked.', severity: 'INFO', created_at: new Date(Date.now() - 3600000).toISOString() }
-    ];
+    return store.supervisor_events || SEED_DATA.supervisor_events;
   }
 
   if (endpoint === '/supervisor/query' && method === 'POST') {
+    const s = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    const mode = s.emergency_stopped ? 'EMERGENCY STOP ENGAGED' : s.paused ? 'PAUSED' : s.enabled ? 'AUTONOMOUS' : 'SUPERVISED';
     return {
-      answer: `Supervisor Telemetry: System is operating normally in AUTONOMOUS mode. 8/8 agents reporting HEALTHY. Refund limit is configured at $1,000. All operations are bounded by policy POL-001 and verified before closing.`,
+      answer: `Supervisor Telemetry: System state is currently ${mode}. 8/8 agents reporting operational. Refund limit is configured at $${s.refund_limit || 1000}. All operations are strictly bounded by configured policies and 5-point verification.`,
       source: 'deterministic'
     };
   }
 
-  // Autonomy settings & actions
-  if (endpoint === '/autonomy/settings') {
+  // Autonomy settings & actions with full state persistence
+  if (endpoint === '/autonomy/settings' && method === 'GET') {
+    return store.autonomy_settings || SEED_DATA.autonomy_settings;
+  }
+
+  if (endpoint === '/autonomy/settings' && method === 'PATCH') {
+    const current = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    store.autonomy_settings = {
+      ...current,
+      ...body,
+      permissions: {
+        ...(current.permissions || {}),
+        ...(body.permissions || {})
+      },
+      updated_at: new Date().toISOString()
+    };
+    saveStorage(store);
     return {
-      id: 'autonomy-config',
-      enabled: true,
-      paused: false,
-      emergency_stopped: false,
-      refund_limit: 1000,
-      allowed_tools: ['get_customer', 'get_order', 'search_policies', 'create_replacement_request', 'cancel_processing_order', 'send_customer_update', 'verify_resolution'],
-      restricted_tools: ['modify_authentication', 'modify_user_permissions', 'delete_customer_account', 'access_system_secrets']
+      success: true,
+      message: 'Autonomous AI Mode settings successfully updated.',
+      settings: store.autonomy_settings
     };
   }
 
-  if (endpoint.startsWith('/autonomy/') && method === 'POST') {
-    return { success: true, message: 'Autonomy status updated successfully.' };
+  if (endpoint === '/autonomy/enable' && method === 'POST') {
+    const current = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    store.autonomy_settings = {
+      ...current,
+      enabled: true,
+      paused: false,
+      emergency_stopped: false,
+      autonomous_approvals_enabled: true,
+      updated_at: new Date().toISOString()
+    };
+    store.supervisor_events = store.supervisor_events || [...SEED_DATA.supervisor_events];
+    store.supervisor_events.unshift({
+      id: `sup-${Date.now()}`,
+      event_type: 'AUTONOMY_MODE_ENABLED',
+      title: 'Autonomous AI Mode Activated',
+      description: 'Autonomous AI Mode enabled by supervisor directive. Policy boundaries active.',
+      severity: 'INFO',
+      created_at: new Date().toISOString()
+    });
+    saveStorage(store);
+    return {
+      success: true,
+      message: 'Autonomous AI Mode successfully ENABLED. Supervisor is authorized to execute policy-bounded workflows.',
+      settings: store.autonomy_settings
+    };
+  }
+
+  if (endpoint === '/autonomy/disable' && method === 'POST') {
+    const current = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    store.autonomy_settings = {
+      ...current,
+      enabled: false,
+      paused: false,
+      autonomous_approvals_enabled: false,
+      updated_at: new Date().toISOString()
+    };
+    store.supervisor_events = store.supervisor_events || [...SEED_DATA.supervisor_events];
+    store.supervisor_events.unshift({
+      id: `sup-${Date.now()}`,
+      event_type: 'AUTONOMY_MODE_DISABLED',
+      title: 'Autonomous AI Mode Disabled',
+      description: 'Autonomous Mode disabled. Reverted to human-supervised gating.',
+      severity: 'INFO',
+      created_at: new Date().toISOString()
+    });
+    saveStorage(store);
+    return {
+      success: true,
+      message: 'Autonomous AI Mode DISABLED. All sensitive actions require human supervisor authorization.',
+      settings: store.autonomy_settings
+    };
+  }
+
+  if (endpoint === '/autonomy/pause' && method === 'POST') {
+    const current = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    store.autonomy_settings = {
+      ...current,
+      paused: true,
+      updated_at: new Date().toISOString()
+    };
+    store.supervisor_events = store.supervisor_events || [...SEED_DATA.supervisor_events];
+    store.supervisor_events.unshift({
+      id: `sup-${Date.now()}`,
+      event_type: 'AUTONOMY_EXECUTION_PAUSED',
+      title: 'Autonomous Execution Paused',
+      description: 'Supervisor paused all automated workflow execution.',
+      severity: 'WARNING',
+      created_at: new Date().toISOString()
+    });
+    saveStorage(store);
+    return {
+      success: true,
+      message: 'Autonomous execution PAUSED. Supervisor is actively monitoring without executing actions.',
+      settings: store.autonomy_settings
+    };
+  }
+
+  if (endpoint === '/autonomy/resume' && method === 'POST') {
+    const current = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    store.autonomy_settings = {
+      ...current,
+      paused: false,
+      updated_at: new Date().toISOString()
+    };
+    store.supervisor_events = store.supervisor_events || [...SEED_DATA.supervisor_events];
+    store.supervisor_events.unshift({
+      id: `sup-${Date.now()}`,
+      event_type: 'AUTONOMY_EXECUTION_RESUMED',
+      title: 'Autonomous Execution Resumed',
+      description: 'Autonomous execution resumed by supervisor.',
+      severity: 'INFO',
+      created_at: new Date().toISOString()
+    });
+    saveStorage(store);
+    return {
+      success: true,
+      message: 'Autonomous execution RESUMED.',
+      settings: store.autonomy_settings
+    };
+  }
+
+  if (endpoint === '/autonomy/emergency-stop' && method === 'POST') {
+    const current = store.autonomy_settings || SEED_DATA.autonomy_settings;
+    store.autonomy_settings = {
+      ...current,
+      emergency_stopped: true,
+      enabled: false,
+      paused: true,
+      autonomous_approvals_enabled: false,
+      updated_at: new Date().toISOString()
+    };
+    store.supervisor_events = store.supervisor_events || [...SEED_DATA.supervisor_events];
+    store.supervisor_events.unshift({
+      id: `sup-${Date.now()}`,
+      event_type: 'EMERGENCY_STOP_ACTIVATED',
+      title: 'EMERGENCY STOP TRIGGERED',
+      description: 'Emergency stop initiated. All autonomous action execution halted.',
+      severity: 'CRITICAL',
+      created_at: new Date().toISOString()
+    });
+    saveStorage(store);
+    return {
+      success: true,
+      message: 'EMERGENCY STOP EXECUTED. All autonomous action execution immediately halted.',
+      settings: store.autonomy_settings
+    };
   }
 
   if (endpoint.startsWith('/customers')) {

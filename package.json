@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "ResolveAI - From customer issue to verified resolution — autonomously.",
+  "type": "module",
   "scripts": {
-    "dev": "node -e 'const { spawn } = require(\"child_process\"); const b = spawn(\"npm\", [\"run\", \"dev\"], { cwd: \"backend\", stdio: \"inherit\", shell: true }); const f = spawn(\"npm\", [\"run\", \"dev\"], { cwd: \"frontend\", stdio: \"inherit\", shell: true }); process.on(\"SIGINT\", () => { b.kill(); f.kill(); process.exit(); });'",
+    "dev": "node -e 'import(\"child_process\").then(({ spawn }) => { const b = spawn(\"npm\", [\"run\", \"dev\"], { cwd: \"backend\", stdio: \"inherit\", shell: true }); const f = spawn(\"npm\", [\"run\", \"dev\"], { cwd: \"frontend\", stdio: \"inherit\", shell: true }); process.on(\"SIGINT\", () => { b.kill(); f.kill(); process.exit(); }); });'",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "seed": "npm --prefix backend run seed",
@@ -12,5 +13,17 @@
     "lint": "npm --prefix frontend run lint",
     "build": "npm --prefix frontend install && npm --prefix frontend run build && rm -rf dist && cp -r frontend/dist dist",
     "build:frontend": "npm --prefix frontend run build"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "resend": "^6.31.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
   }
 }

@@ -88,12 +88,22 @@ app.get('/', (req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-const PORT = config.port;
-app.listen(PORT, () => {
-  console.log(`\n======================================================`);
-  console.log(`⚡ ResolveAI Backend Server running on port ${PORT}`);
-  console.log(`⚡ Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`⚡ Gemini Model: ${config.geminiModel} (${config.geminiApiKey ? 'API Key Active' : 'Fallback Mode'})`);
-  console.log(`⚡ Email Service: ${config.resendApiKey && config.resendApiKey.startsWith('re_') ? 'READY (Provider: Resend)' : 'READY (Transactional Simulator Mode)'}`);
-  console.log(`======================================================\n`);
-});
+const isMainModule = process.argv[1] && (
+  process.argv[1].endsWith('server.js') || 
+  process.argv[1].endsWith('server')
+);
+
+if (isMainModule) {
+  const PORT = config.port;
+  app.listen(PORT, () => {
+    console.log(`\n======================================================`);
+    console.log(`⚡ ResolveAI Backend Server running on port ${PORT}`);
+    console.log(`⚡ Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`⚡ Gemini Model: ${config.geminiModel} (${config.geminiApiKey ? 'API Key Active' : 'Fallback Mode'})`);
+    console.log(`⚡ Email Service: ${config.resendApiKey && config.resendApiKey.startsWith('re_') ? 'READY (Provider: Resend)' : 'READY (Transactional Simulator Mode)'}`);
+    console.log(`======================================================\n`);
+  });
+}
+
+export { app };
+export default app;

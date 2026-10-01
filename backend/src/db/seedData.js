@@ -369,11 +369,11 @@ export const getInitialData = () => {
   const autonomy_settings = [
     {
       id: 'autonomy-config',
-      enabled: false,
+      enabled: true,
       paused: false,
       emergency_stopped: false,
-      enabled_by: null,
-      enabled_at: null,
+      enabled_by: 'System Administrator',
+      enabled_at: '2026-10-01T07:00:00.000Z',
       refund_limit: 1000,
       max_retries: 2,
       allowed_tools: [
@@ -413,6 +413,15 @@ export const getInitialData = () => {
           note: 'Initial policy boundaries initialized'
         }
       ],
+      approval_mode: 'HYBRID',
+      autonomous_approvals_enabled: true,
+      permissions: {
+        allow_replacements: true,
+        allow_shipping: true,
+        allow_notifications: true,
+        allow_status_changes: true,
+        allow_refunds: false
+      },
       updated_at: '2026-10-01T07:00:00.000Z'
     }
   ];

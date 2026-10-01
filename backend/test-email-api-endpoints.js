@@ -1,11 +1,24 @@
 import jwt from 'jsonwebtoken';
 import { config } from './src/config/env.js';
+import { app } from './src/server.js';
 
 async function testEndpoints() {
-  console.log('Testing Authenticated HTTP Endpoints on http://localhost:5001...\n');
-  const base = 'http://localhost:5001';
+  let base = 'http://localhost:5001';
+  let server = null;
+  try {
+    const ping = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(800) });
+    if (!ping.ok) throw new Error();
+  } catch (e) {
+    server = await new Promise(resolve => {
+      const s = app.listen(0, () => resolve(s));
+    });
+    base = `http://localhost:${server.address().port}`;
+  }
 
-  // Generate valid test JWT for manager user
+  console.log(`Testing Authenticated HTTP Endpoints on ${base}...\n`);
+
+  try {
+    // Generate valid test JWT for manager user
   const token = jwt.sign(
     { id: 'usr-manager-01', email: 'manager@resolveai.io', role: 'manager' },
     config.jwtSecret,
@@ -79,6 +92,11 @@ async function testEndpoints() {
   console.log('\n====================================================');
   console.log('ALL HTTP EMAIL API ENDPOINT TESTS PASSED SUCCESSFULLY');
   console.log('====================================================');
+  } finally {
+    if (server) {
+      server.close();
+    }
+  }
 }
 
 testEndpoints().catch(err => {

@@ -1,6 +1,33 @@
 import { handleClientMock } from './clientMockStore';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const getApiBase = () => {
+  // If running in browser
+  if (typeof window !== 'undefined' && window.location) {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const envUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || '').trim();
+
+    // If deployed on Vercel or any non-localhost domain
+    if (!isLocalhost) {
+      // If envUrl is empty or accidentally points to localhost/loopback, always route to same-origin /api
+      if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+        return '/api';
+      }
+      const clean = envUrl.replace(/\/+$/, '');
+      return clean.endsWith('/api') ? clean : `${clean}/api`;
+    }
+
+    // On local machine
+    if (envUrl) {
+      const clean = envUrl.replace(/\/+$/, '');
+      return clean.endsWith('/api') ? clean : `${clean}/api`;
+    }
+  }
+
+  // Default local fallback
+  return 'http://localhost:5001/api';
+};
+
+const API_BASE = getApiBase();
 
 class ApiClient {
   constructor() {
@@ -55,7 +82,21 @@ class ApiClient {
         }
       }
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data;
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(`API Error (HTTP ${response.status}): ${text.substring(0, 120)}`);
+        }
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { message: text };
+        }
+      }
 
       if (!response.ok) {
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
@@ -63,8 +104,8 @@ class ApiClient {
 
       return data;
     } catch (err) {
-      // If network fails (e.g. backend not deployed yet or mixed content on Vercel preview),
-      // seamlessly fall back to client mock store so the live demo stays 100% functional
+      // If network fails (e.g. backend unreachable or blocked by CORS),
+      // fall back to client demo store so offline testing works cleanly
       if (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
         console.warn(`[ResolveAI] Backend unavailable at ${url}. Seamlessly using client demo store.`);
         return handleClientMock(endpoint, options);

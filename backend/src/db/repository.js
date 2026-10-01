@@ -107,8 +107,13 @@ export class Repository {
         console.log('[DATABASE] Hydrating local state from Supabase PostgreSQL...');
         for (const table of TABLES) {
           const { data, error: fetchErr } = await this.supabase.from(table).select('*');
-          if (!fetchErr && data && data.length > 0) {
-            this.data[table] = data;
+          if (!fetchErr && Array.isArray(data)) {
+            const currentMap = new Map((this.data[table] || []).map(r => [r.id, r]));
+            for (const remoteRecord of data) {
+              const local = currentMap.get(remoteRecord.id);
+              currentMap.set(remoteRecord.id, local ? { ...local, ...remoteRecord } : remoteRecord);
+            }
+            this.data[table] = Array.from(currentMap.values());
           }
         }
         this.persistLocal();
