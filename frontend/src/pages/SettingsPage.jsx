@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Building,
   Bell,
-  PhoneCall,
   Layers,
   Save,
   Sliders,
@@ -44,12 +43,8 @@ export default function SettingsPage() {
     safetyGateMode: 'Strict Human-in-the-Loop',
     notifications: {
       inApp: true,
-      email: true,
-      voice: false
+      email: true
     },
-    voiceCallStart: '09:00',
-    voiceCallEnd: '21:00',
-    voiceFrequency: 'important',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   });
 
@@ -202,7 +197,6 @@ export default function SettingsPage() {
     { id: 'general', label: 'General & Workspace', icon: <Building size={17} /> },
     { id: 'ai', label: 'AI & Automation', icon: <Cpu size={17} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={17} /> },
-    { id: 'voice', label: 'Voice Operations', icon: <PhoneCall size={17} /> },
     { id: 'security', label: 'Security & Access', icon: <Shield size={17} /> },
     { id: 'system', label: 'System & Demo State', icon: <Database size={17} /> }
   ];
@@ -456,7 +450,7 @@ export default function SettingsPage() {
                     Multi-Channel
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    Email: ON · In-App: ON · Voice: {formData.notifications.voice ? 'ON' : 'OFF'}
+                    Email: ON · In-App: ON
                   </div>
                 </div>
 
@@ -816,23 +810,6 @@ export default function SettingsPage() {
                       <span className="toggle-thumb" />
                     </button>
                   </div>
-
-                  <div className="settings-toggle-row">
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Automated AI Voice Calls</div>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        Enable optional outbound phone updates during business calling windows.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleNotificationToggle('voice')}
-                      className={`toggle-switch ${formData.notifications.voice ? 'on' : ''}`}
-                      aria-label="Toggle AI Voice Notifications"
-                    >
-                      <span className="toggle-thumb" />
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -1017,90 +994,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ================================================================
-              TAB: VOICE OPERATIONS
-              ================================================================ */}
-          {activeTab === 'voice' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div className="settings-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <PhoneCall size={18} color="var(--accent-purple)" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>AI Voice Call Updates</h3>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '24px' }}>
-                  Configure automated spoken briefings for urgent customer tickets and carrier updates.
-                </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
-                  <div>
-                    <label className="settings-label">Voice Update Activation</label>
-                    <div className="settings-helper">Voice calls remain strictly OFF until customer opts in.</div>
-                    <div style={{ marginTop: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleNotificationToggle('voice')}
-                        className={`toggle-switch ${formData.notifications.voice ? 'on' : ''}`}
-                        aria-label="Toggle Voice Updates"
-                      >
-                        <span className="toggle-thumb" />
-                      </button>
-                      <span style={{ marginLeft: '12px', fontSize: '0.88rem', fontWeight: 700 }}>
-                        {formData.notifications.voice ? 'Voice Updates ENABLED' : 'Voice Updates DISABLED'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="settings-label">Allowed Calling Hours Window</label>
-                    <div className="settings-helper">Prevents disturbing customers during night hours.</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                      <input
-                        type="time"
-                        className="settings-input"
-                        value={formData.voiceCallStart}
-                        onChange={(e) => handleFieldChange('voiceCallStart', e.target.value)}
-                        style={{ width: '130px' }}
-                      />
-                      <span style={{ color: 'var(--text-muted)' }}>to</span>
-                      <input
-                        type="time"
-                        className="settings-input"
-                        value={formData.voiceCallEnd}
-                        onChange={(e) => handleFieldChange('voiceCallEnd', e.target.value)}
-                        style={{ width: '130px' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="settings-label">Call Notification Frequency</label>
-                    <div className="settings-helper">Threshold for initiating phone calls.</div>
-                    <select
-                      className="settings-input"
-                      value={formData.voiceFrequency}
-                      onChange={(e) => handleFieldChange('voiceFrequency', e.target.value)}
-                    >
-                      <option value="important">Important Updates Only (Replacements & Delays)</option>
-                      <option value="emergency">Critical / Emergency Only</option>
-                      <option value="all">All Stage Transitions</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="settings-label">Timezone</label>
-                    <div className="settings-helper">Used to calculate calling window boundaries.</div>
-                    <input
-                      type="text"
-                      className="settings-input"
-                      value={formData.timezone}
-                      onChange={(e) => handleFieldChange('timezone', e.target.value)}
-                      placeholder="e.g. America/New_York or UTC"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ================================================================
               TAB: SECURITY & ACCESS

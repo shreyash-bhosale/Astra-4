@@ -29,7 +29,6 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false); // Voice calls remain OFF by default
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -286,7 +285,7 @@ export default function RegisterPage() {
               </div>
             </div>
             <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-              Used for critical resolution notices and optional AI voice updates.
+              Used for critical support contact and security notices.
             </span>
           </div>
 
@@ -502,20 +501,6 @@ export default function RegisterPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: 600 }}>Transactional Email Updates</span>
                 <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.78rem' }}>✓ Enabled</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>AI Voice Call Updates</div>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Off by default; enable anytime</div>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={voiceEnabled}
-                    onChange={(e) => setVoiceEnabled(e.target.checked)}
-                    style={{ width: '16px', height: '16px' }}
-                  />
-                </label>
               </div>
             </div>
 

@@ -16,8 +16,7 @@ import {
   FileCheck,
   Check,
   Activity,
-  BellRing,
-  PhoneCall
+  BellRing
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -152,7 +151,7 @@ export default function LandingPage() {
       badge: '✦',
       name: 'Communication Agent',
       role: 'Customer & Internal Briefing Writer',
-      desc: 'Drafts empathetic, highly factual customer notifications across email, portal, and voice channels based purely on verified evidence without hallucinations.',
+      desc: 'Drafts empathetic, highly factual customer notifications across email and portal channels based purely on verified evidence without hallucinations.',
       tool: 'Contextual Tone & Multi-Channel Dispatcher',
       confidence: '98.2%'
     },
@@ -938,11 +937,11 @@ export default function LandingPage() {
 
               <div style={{ padding: '20px 24px', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <PhoneCall size={18} />
+                  <FileCheck size={18} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Optional AI Voice Call Updates</div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Opt-in spoken briefings honoring custom calling windows (09:00 - 21:00).</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Verified Carrier Tracking & Outcomes</div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Instant carrier tracking numbers and full compliance resolution certificates.</div>
                 </div>
               </div>
             </div>
