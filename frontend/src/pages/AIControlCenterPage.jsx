@@ -31,6 +31,8 @@ export default function AIControlCenterPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
+  const canManage = isAdmin || isManager;
 
   const [statusData, setStatusData] = useState(null);
   const [agents, setAgents] = useState([]);
@@ -330,20 +332,20 @@ export default function AIControlCenterPage() {
           {isAutonomous ? (
             <button
               onClick={handleDisableAutonomy}
-              disabled={actionLoading || !isAdmin}
+              disabled={actionLoading || !canManage}
               className="btn-secondary"
               style={{ height: '42px', fontSize: '0.88rem' }}
-              title={!isAdmin ? 'Admin role required' : ''}
+              title={!canManage ? 'Manager or Admin role required' : ''}
             >
               <span>Disable Autonomous Mode</span>
             </button>
           ) : (
             <button
               onClick={() => setShowEnableModal(true)}
-              disabled={actionLoading || !isAdmin}
+              disabled={actionLoading || !canManage}
               className="btn-primary"
               style={{ height: '42px', fontSize: '0.88rem' }}
-              title={!isAdmin ? 'Admin role required' : ''}
+              title={!canManage ? 'Manager or Admin role required' : ''}
             >
               <Zap size={16} />
               <span>Enable Autonomous AI Mode</span>
@@ -353,9 +355,10 @@ export default function AIControlCenterPage() {
           {settings?.enabled && (
             <button
               onClick={handleTogglePause}
-              disabled={actionLoading || !isAdmin}
+              disabled={actionLoading || !canManage}
               className="btn-secondary"
               style={{ height: '42px', fontSize: '0.88rem' }}
+              title={!canManage ? 'Manager or Admin role required' : ''}
             >
               {settings?.paused ? <Play size={16} /> : <Pause size={16} />}
               <span>{settings?.paused ? 'Resume Execution' : 'Pause Execution'}</span>
@@ -364,7 +367,7 @@ export default function AIControlCenterPage() {
 
           <button
             onClick={() => setShowEmergencyModal(true)}
-            disabled={actionLoading || !isAdmin}
+            disabled={actionLoading || !canManage}
             style={{
               height: '42px',
               paddingInline: '16px',
@@ -375,9 +378,11 @@ export default function AIControlCenterPage() {
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              opacity: canManage ? 1 : 0.6,
+              cursor: canManage ? 'pointer' : 'not-allowed'
             }}
-            title={!isAdmin ? 'Admin role required' : ''}
+            title={!canManage ? 'Manager or Admin role required' : ''}
           >
             <AlertOctagon size={16} />
             <span>Emergency Stop</span>
@@ -747,7 +752,7 @@ export default function AIControlCenterPage() {
               </div>
               <button
                 type="button"
-                disabled={!isAdmin}
+                disabled={!canManage}
                 onClick={() => setDraftAutonomousApprovalsEnabled(!draftAutonomousApprovalsEnabled)}
                 style={{
                   padding: '6px 14px',
@@ -757,7 +762,7 @@ export default function AIControlCenterPage() {
                   border: '1px solid var(--border-strong)',
                   fontWeight: 700,
                   fontSize: '0.78rem',
-                  cursor: isAdmin ? 'pointer' : 'default'
+                  cursor: canManage ? 'pointer' : 'default'
                 }}
               >
                 {draftAutonomousApprovalsEnabled ? 'Enabled' : 'Disabled'}
@@ -789,13 +794,13 @@ export default function AIControlCenterPage() {
                 ].map(mode => (
                   <label
                     key={mode.id}
-                    onClick={() => isAdmin && setDraftApprovalMode(mode.id)}
+                    onClick={() => canManage && setDraftApprovalMode(mode.id)}
                     style={{
                       padding: '10px 14px',
                       borderRadius: 'var(--radius-sm)',
                       border: draftApprovalMode === mode.id ? '2px solid #000000' : '1px solid var(--border-subtle)',
                       backgroundColor: draftApprovalMode === mode.id ? 'var(--bg-secondary)' : 'var(--bg-primary)',
-                      cursor: isAdmin ? 'pointer' : 'default',
+                      cursor: canManage ? 'pointer' : 'default',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '2px'
@@ -806,7 +811,7 @@ export default function AIControlCenterPage() {
                         type="radio"
                         name="approval_mode"
                         checked={draftApprovalMode === mode.id}
-                        disabled={!isAdmin}
+                        disabled={!canManage}
                         onChange={() => setDraftApprovalMode(mode.id)}
                       />
                       <span style={{ fontWeight: 800, fontSize: '0.84rem' }}>{mode.name}</span>
@@ -844,7 +849,7 @@ export default function AIControlCenterPage() {
                         borderRadius: 'var(--radius-sm)',
                         backgroundColor: checked ? 'var(--bg-tertiary)' : 'transparent',
                         border: '1px solid var(--border-light)',
-                        cursor: isAdmin ? 'pointer' : 'default',
+                        cursor: canManage ? 'pointer' : 'default',
                         fontSize: '0.82rem'
                       }}
                     >
@@ -852,7 +857,7 @@ export default function AIControlCenterPage() {
                         <input
                           type="checkbox"
                           checked={checked}
-                          disabled={!isAdmin}
+                          disabled={!canManage}
                           onChange={() => togglePermission(perm.key)}
                         />
                         <span style={{ fontWeight: 600 }}>{perm.label}</span>
@@ -883,7 +888,7 @@ export default function AIControlCenterPage() {
                   <button
                     key={amt}
                     type="button"
-                    disabled={!isAdmin}
+                    disabled={!canManage}
                     onClick={() => setDraftRefundLimit(amt)}
                     style={{
                       flex: 1,
@@ -896,7 +901,7 @@ export default function AIControlCenterPage() {
                       fontSize: '0.85rem',
                       boxShadow: draftRefundLimit === amt ? 'var(--shadow-subtle)' : 'none',
                       transition: 'all var(--transition-fast)',
-                      cursor: isAdmin ? 'pointer' : 'default'
+                      cursor: canManage ? 'pointer' : 'default'
                     }}
                   >
                     ${amt}
@@ -940,7 +945,7 @@ export default function AIControlCenterPage() {
               </div>
             </div>
 
-            {isAdmin && (
+            {canManage && (
               <button
                 type="submit"
                 disabled={savingSettings}

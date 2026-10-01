@@ -332,6 +332,19 @@ export default function DashboardLayout({ children }) {
                 Manager
               </button>
               <button
+                onClick={() => loginWithDemo('admin')}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.75rem',
+                  fontWeight: user?.role === 'admin' ? 700 : 500,
+                  backgroundColor: user?.role === 'admin' ? 'var(--text-primary)' : 'var(--bg-tertiary)',
+                  color: user?.role === 'admin' ? 'var(--bg-primary)' : 'var(--text-secondary)'
+                }}
+              >
+                Admin
+              </button>
+              <button
                 onClick={() => navigate('/customer')}
                 title="Open Customer Portal"
                 style={{
