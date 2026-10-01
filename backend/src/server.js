@@ -12,15 +12,47 @@ import approvalRoutes from './routes/approvalRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
 
+import { generalLimiter } from './middleware/rateLimiter.js';
+
 const app = express();
 
-// Middleware
+// Allowed Origins
+const allowedOrigins = [
+  config.frontendUrl,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://astra4-delta.vercel.app'
+].filter(Boolean);
+
+// CORS Configuration
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow non-browser requests (like server-to-server, curl, tests)
+    if (!origin) return callback(null, true);
+
+    if (config.isProduction) {
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS policy violation: Origin '${origin}' is not authorized.`));
+    }
+
+    // Development mode
+    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS policy violation in dev: Origin '${origin}' is not authorized.`));
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
+
+// Apply global rate limiting to all API routes
+app.use('/api', generalLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);

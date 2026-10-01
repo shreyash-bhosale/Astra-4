@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import confetti from 'canvas-confetti';
+import RejectionModal from '../components/RejectionModal';
 import {
   Sparkles,
   ShieldAlert,
   CheckCircle2,
   AlertCircle,
-  Clock,
   ArrowLeft,
   Copy,
   Check,
   Package,
   User,
-  ExternalLink,
-  ChevronRight,
   RefreshCw,
   FileCheck
 } from 'lucide-react';
@@ -28,26 +26,75 @@ export default function TicketWorkspacePage() {
   const [approving, setApproving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
 
-  const fetchTicket = async () => {
+  // Rejection modal state
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [targetApproval, setTargetApproval] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectionError, setRejectionError] = useState('');
+
+  const retryCountRef = useRef(0);
+
+  const fetchTicket = useCallback(async () => {
     try {
       const data = await api.getTicket(id);
       setTicket(data);
+      retryCountRef.current = 0;
     } catch (err) {
+      retryCountRef.current += 1;
       setError(err.message || 'Failed to load ticket');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchTicket();
-    const interval = setInterval(fetchTicket, 3500);
-    return () => clearInterval(interval);
-  }, [id]);
+
+    let timeoutId = null;
+    let isCancelled = false;
+
+    const scheduleNextPoll = () => {
+      if (isCancelled) return;
+      if (document.visibilityState === 'hidden') return;
+
+      // Stop polling when case reaches terminal resolution
+      if (ticket && (ticket.status === 'RESOLVED' || ticket.status === 'FAILED' || ticket.status === 'ESCALATED')) {
+        return;
+      }
+
+      // Exponential backoff on errors, capped at 25s
+      const delay = Math.min(3500 * Math.pow(1.5, retryCountRef.current), 25000);
+      timeoutId = setTimeout(async () => {
+        await fetchTicket();
+        scheduleNextPoll();
+      }, delay);
+    };
+
+    scheduleNextPoll();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTicket();
+        scheduleNextPoll();
+      } else {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [id, fetchTicket, ticket?.status]);
 
   const handleRunAI = async () => {
     setError('');
+    setActionError('');
     setRunning(true);
     try {
       const result = await api.runWorkflow(id);
@@ -68,6 +115,7 @@ export default function TicketWorkspacePage() {
 
   const handleApprove = async (approvalId) => {
     setApproving(true);
+    setActionError('');
     try {
       const res = await api.approve(approvalId);
       await fetchTicket();
@@ -79,27 +127,51 @@ export default function TicketWorkspacePage() {
         });
       }
     } catch (err) {
-      alert('Approval failed: ' + err.message);
+      setActionError(err.message || 'Approval authorization failed');
     } finally {
       setApproving(false);
     }
   };
 
-  const handleReject = async (approvalId) => {
-    const reason = prompt('Please specify rejection reason:', 'Requires supervisor manual inspection');
-    if (!reason) return;
+  const handleOpenRejectModal = (approval) => {
+    setTargetApproval(approval);
+    setRejectionError('');
+    setRejectionModalOpen(true);
+  };
+
+  const handleConfirmReject = async (reason) => {
+    if (!targetApproval) return;
+    setRejecting(true);
+    setRejectionError('');
     try {
-      await api.reject(approvalId, reason);
+      await api.reject(targetApproval.id, reason);
+      setRejectionModalOpen(false);
+      setTargetApproval(null);
       await fetchTicket();
     } catch (err) {
-      alert('Rejection failed: ' + err.message);
+      setRejectionError(err.message || 'Rejection failed');
+    } finally {
+      setRejecting(false);
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async (text) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
   };
 
   if (loading) {
@@ -227,7 +299,7 @@ export default function TicketWorkspacePage() {
                 <User size={15} />
                 <span>Customer Profile</span>
               </div>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-pill)', backgroundColor: 'var(--status-proc-bg)', color: 'var(--status-proc-text)' }}>
                 {ticket.customer?.tier || 'Standard'}
               </span>
             </div>
@@ -276,6 +348,14 @@ export default function TicketWorkspacePage() {
 
         {/* Center Column (Columns 5-8): Resolution Plan & Approval Modal */}
         <div style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', gap: '20px' }} className="workspace-center-col">
+          {/* Action Error Banner */}
+          {actionError && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: 'var(--radius-md)', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '0.88rem' }}>
+              <AlertCircle size={16} />
+              <span>{actionError}</span>
+            </div>
+          )}
+
           {/* Human Approval Gate Alert (When Paused) */}
           {pendingApproval && (
             <div
@@ -323,7 +403,7 @@ export default function TicketWorkspacePage() {
                 </button>
 
                 <button
-                  onClick={() => handleReject(pendingApproval.id)}
+                  onClick={() => handleOpenRejectModal(pendingApproval)}
                   disabled={approving}
                   className="btn-secondary"
                   style={{ height: '44px', color: '#b91c1c', borderColor: '#fca5a5', fontSize: '0.92rem' }}
@@ -526,6 +606,20 @@ export default function TicketWorkspacePage() {
           }
         }
       `}</style>
+
+      {/* Accessible Rejection Modal replacing native prompt() */}
+      <RejectionModal
+        isOpen={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setTargetApproval(null);
+          setRejectionError('');
+        }}
+        onReject={handleConfirmReject}
+        actionName={targetApproval?.action || 'action'}
+        loading={rejecting}
+        error={rejectionError}
+      />
     </div>
   );
 }

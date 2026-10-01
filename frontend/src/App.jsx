@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -11,11 +11,21 @@ import DashboardPage from './pages/DashboardPage';
 import TicketsListPage from './pages/TicketsListPage';
 import TicketWorkspacePage from './pages/TicketWorkspacePage';
 import ApprovalsPage from './pages/ApprovalsPage';
-import CustomersPage from './pages/CustomersPage';
-import OrdersPage from './pages/OrdersPage';
-import PoliciesPage from './pages/PoliciesPage';
-import ActivityPage from './pages/ActivityPage';
-import SettingsPage from './pages/SettingsPage';
+
+// Code-split secondary dashboard routes
+const CustomersPage = lazy(() => import('./pages/CustomersPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const PoliciesPage = lazy(() => import('./pages/PoliciesPage'));
+const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+function PageLoader() {
+  return (
+    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+      Loading workspace view...
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -48,11 +58,11 @@ export default function App() {
             <Route path="/tickets" element={<ProtectedRoute><TicketsListPage /></ProtectedRoute>} />
             <Route path="/tickets/:id" element={<ProtectedRoute><TicketWorkspacePage /></ProtectedRoute>} />
             <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />
-            <Route path="/customers" element={<ProtectedRoute><CustomersPage /></ProtectedRoute>} />
-            <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
-            <Route path="/policies" element={<ProtectedRoute><PoliciesPage /></ProtectedRoute>} />
-            <Route path="/activity" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><CustomersPage /></Suspense></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><OrdersPage /></Suspense></ProtectedRoute>} />
+            <Route path="/policies" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><PoliciesPage /></Suspense></ProtectedRoute>} />
+            <Route path="/activity" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><ActivityPage /></Suspense></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<PageLoader />}><SettingsPage /></Suspense></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

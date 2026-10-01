@@ -43,8 +43,8 @@ export default function CustomersPage() {
                   fontWeight: 700,
                   padding: '3px 8px',
                   borderRadius: 'var(--radius-pill)',
-                  backgroundColor: '#eff6ff',
-                  color: '#1d4ed8'
+                  backgroundColor: 'var(--status-proc-bg)',
+                  color: 'var(--status-proc-text)'
                 }}
               >
                 {c.tier || 'Standard Tier'}

@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { listPolicies, getPolicy, createPolicy, updatePolicy } from '../controllers/policyController.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
 router.get('/', requireAuth, listPolicies);
-router.post('/', requireAuth, createPolicy);
+router.post('/', requireAuth, requireRole(['manager', 'admin']), createPolicy);
 router.get('/:id', requireAuth, getPolicy);
-router.patch('/:id', requireAuth, updatePolicy);
+router.patch('/:id', requireAuth, requireRole(['manager', 'admin']), updatePolicy);
 
 export default router;

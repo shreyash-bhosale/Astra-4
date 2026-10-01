@@ -10,6 +10,12 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('resolveai_theme', theme);
+
+    // Synchronize browser meta theme-color
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', theme === 'dark' ? '#090a0f' : '#ffffff');
+    }
   }, [theme]);
 
   const toggleTheme = () => {

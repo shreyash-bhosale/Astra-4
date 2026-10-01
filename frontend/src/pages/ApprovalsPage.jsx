@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import confetti from 'canvas-confetti';
+import RejectionModal from '../components/RejectionModal';
 import {
   ShieldAlert,
   CheckCircle2,
   XCircle,
-  Clock,
   ArrowRight,
   ExternalLink,
-  Shield,
-  FileCheck
+  AlertCircle
 } from 'lucide-react';
 
 export default function ApprovalsPage() {
@@ -18,28 +17,67 @@ export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState(null);
+  const [actionError, setActionError] = useState('');
 
-  const fetchApprovals = async () => {
+  // Rejection modal state
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [targetApproval, setTargetApproval] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectionError, setRejectionError] = useState('');
+
+  const fetchApprovals = useCallback(async () => {
     try {
       const data = await api.getApprovals();
       setApprovals(data);
     } catch (err) {
-      console.error(err);
+      console.warn('Failed to fetch approvals:', err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchApprovals();
-    const interval = setInterval(fetchApprovals, 5000);
-    return () => clearInterval(interval);
-  }, []);
+
+    let intervalId = null;
+
+    const startPolling = () => {
+      if (document.visibilityState === 'visible' && !intervalId) {
+        intervalId = setInterval(fetchApprovals, 5000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    startPolling();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchApprovals();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchApprovals]);
 
   const handleApprove = async (id, ticketId) => {
     setActionInProgress(id);
+    setActionError('');
     try {
-      const res = await api.approve(id);
+      await api.approve(id);
       await fetchApprovals();
       confetti({
         particleCount: 60,
@@ -48,23 +86,31 @@ export default function ApprovalsPage() {
       });
       navigate(`/tickets/${ticketId}`);
     } catch (err) {
-      alert('Approval failed: ' + err.message);
+      setActionError(err.message || 'Approval authorization failed');
     } finally {
       setActionInProgress(null);
     }
   };
 
-  const handleReject = async (id) => {
-    const reason = prompt('Specify rejection reason:', 'Requires supervisor manual inspection');
-    if (!reason) return;
-    setActionInProgress(id);
+  const handleOpenRejectModal = (appr) => {
+    setTargetApproval(appr);
+    setRejectionError('');
+    setRejectionModalOpen(true);
+  };
+
+  const handleConfirmReject = async (reason) => {
+    if (!targetApproval) return;
+    setRejecting(true);
+    setRejectionError('');
     try {
-      await api.reject(id, reason);
+      await api.reject(targetApproval.id, reason);
+      setRejectionModalOpen(false);
+      setTargetApproval(null);
       await fetchApprovals();
     } catch (err) {
-      alert('Rejection failed: ' + err.message);
+      setRejectionError(err.message || 'Rejection failed');
     } finally {
-      setActionInProgress(null);
+      setRejecting(false);
     }
   };
 
@@ -82,6 +128,13 @@ export default function ApprovalsPage() {
         </p>
       </div>
 
+      {actionError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: 'var(--radius-md)', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', marginBottom: '24px', fontSize: '0.88rem' }}>
+          <AlertCircle size={16} />
+          <span>{actionError}</span>
+        </div>
+      )}
+
       {/* Pending Approvals Section */}
       <div style={{ marginBottom: '48px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -91,7 +144,21 @@ export default function ApprovalsPage() {
           </h2>
         </div>
 
-        {pendingApprovals.length === 0 ? (
+        {loading ? (
+          <div
+            style={{
+              padding: '48px',
+              textAlign: 'center',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-primary)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-muted)',
+              fontSize: '0.9rem'
+            }}
+          >
+            Loading approval queue...
+          </div>
+        ) : pendingApprovals.length === 0 ? (
           <div
             style={{
               padding: '48px',
@@ -172,7 +239,7 @@ export default function ApprovalsPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                   <button
-                    onClick={() => handleReject(appr.id)}
+                    onClick={() => handleOpenRejectModal(appr)}
                     disabled={actionInProgress === appr.id}
                     className="btn-secondary"
                     style={{ height: '42px', paddingInline: '20px', color: '#dc2626', borderColor: '#fca5a5' }}
@@ -247,6 +314,19 @@ export default function ApprovalsPage() {
           </div>
         </div>
       )}
+      {/* Accessible Rejection Modal replacing native prompt */}
+      <RejectionModal
+        isOpen={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setTargetApproval(null);
+          setRejectionError('');
+        }}
+        onReject={handleConfirmReject}
+        actionName={targetApproval?.action || 'action'}
+        loading={rejecting}
+        error={rejectionError}
+      />
     </div>
   );
 }

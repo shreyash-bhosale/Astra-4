@@ -32,7 +32,7 @@ export default function LiquidMetalHeroCanvas() {
         powerPreference: 'high-performance'
       });
       renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
       currentMount.appendChild(renderer.domElement);
 
       // Liquid Chrome / Polished Mercury Material
@@ -155,14 +155,17 @@ export default function LiquidMetalHeroCanvas() {
       // Animation Loop
       const startTime = performance.now();
 
-      const animate = () => {
-        animationFrameId = requestAnimationFrame(animate);
+      if (prefersReducedMotion) {
+        // Render single static frame for reduced motion preference
+        renderer.render(scene, camera);
+      } else {
+        const animate = () => {
+          animationFrameId = requestAnimationFrame(animate);
 
-        const elapsedTime = (performance.now() - startTime) / 1000;
-        mouseX += (targetMouseX - mouseX) * 0.04;
-        mouseY += (targetMouseY - mouseY) * 0.04;
+          const elapsedTime = (performance.now() - startTime) / 1000;
+          mouseX += (targetMouseX - mouseX) * 0.04;
+          mouseY += (targetMouseY - mouseY) * 0.04;
 
-        if (!prefersReducedMotion) {
           sculptures.forEach((item) => {
             const floatOffset = Math.sin(elapsedTime * item.floatSpeed) * item.floatAmp;
             item.mesh.position.y = item.initY + floatOffset - mouseY * item.parallaxFactor * 6;
@@ -173,12 +176,12 @@ export default function LiquidMetalHeroCanvas() {
           camera.position.x = mouseX * 0.5;
           camera.position.y = -mouseY * 0.35;
           camera.lookAt(0, 0, 0);
-        }
 
-        renderer.render(scene, camera);
-      };
+          renderer.render(scene, camera);
+        };
 
-      animate();
+        animate();
+      }
 
       return () => {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -190,6 +193,10 @@ export default function LiquidMetalHeroCanvas() {
         }
 
         try {
+          blob1Geo.dispose();
+          blob2Geo.dispose();
+          droplet1Geo.dispose();
+          chromeMaterial.dispose();
           if (renderer) renderer.dispose();
         } catch (e) {
           // ignore cleanup errors

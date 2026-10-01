@@ -8,6 +8,8 @@
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend run test",
+    "lint": "npm --prefix frontend run lint",
     "build": "cd frontend && npm install && npm run build && cd .. && rm -rf dist && cp -r frontend/dist dist",
     "build:frontend": "npm --prefix frontend run build"
   }

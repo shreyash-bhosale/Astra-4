@@ -26,9 +26,12 @@ for (const envPath of envCandidates) {
 export const config = {
   port: process.env.PORT || 5001,
   jwtSecret: process.env.JWT_SECRET || 'resolveai-hackathon-jwt-secret-key-2026-very-secure',
-  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
   geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173'
+  supabaseUrl: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  nodeEnv: process.env.NODE_ENV || 'development',
+  isProduction: process.env.NODE_ENV === 'production',
+  databaseMode: process.env.DATABASE_MODE || (process.env.NODE_ENV === 'production' && (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ? 'supabase' : 'local')
 };

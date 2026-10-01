@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Settings, Cpu, Shield, Database, RefreshCw, CheckCircle2, Lock } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
+import { Settings, Cpu, Shield, Database, RefreshCw, CheckCircle2, Lock, AlertCircle } from 'lucide-react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [resetError, setResetError] = useState('');
 
   useEffect(() => {
     api.getSettings()
@@ -14,18 +18,25 @@ export default function SettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleReset = async () => {
-    if (window.confirm('Reset the database to initial demo state?')) {
-      setResetting(true);
-      try {
-        await api.resetDemo();
-        alert('Database re-seeded successfully.');
+  const handleOpenResetModal = () => {
+    setResetError('');
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = async () => {
+    setResetting(true);
+    setResetError('');
+    try {
+      await api.resetDemo();
+      setShowResetConfirm(false);
+      setResetSuccess('Demo database successfully re-seeded to initial state.');
+      setTimeout(() => {
         window.location.reload();
-      } catch (err) {
-        alert('Reset failed: ' + err.message);
-      } finally {
-        setResetting(false);
-      }
+      }, 1200);
+    } catch (err) {
+      setResetError(err.message || 'Reset failed');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -38,6 +49,20 @@ export default function SettingsPage() {
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
           Configuration for Google Gemini models, safety gating thresholds, and internal tool allowlists.
         </p>
+
+        {resetSuccess && (
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--status-res-bg)', color: 'var(--status-res-text)', fontSize: '0.88rem' }}>
+            <CheckCircle2 size={16} />
+            <span>{resetSuccess}</span>
+          </div>
+        )}
+
+        {resetError && (
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: 'var(--radius-md)', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '0.88rem' }}>
+            <AlertCircle size={16} />
+            <span>{resetError}</span>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -133,7 +158,7 @@ export default function SettingsPage() {
             Quickly restore the demo environment to initial seed values (Elena Rostova damaged headphones case, Marcus Vance wrong switch exchange, and Sophia Chen cancellation).
           </p>
           <button
-            onClick={handleReset}
+            onClick={handleOpenResetModal}
             disabled={resetting}
             className="btn-secondary"
             style={{ height: '42px', paddingInline: '20px', gap: '8px' }}
@@ -143,6 +168,20 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Accessible Confirmation Modal replacing window.confirm */}
+      <ConfirmationModal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleConfirmReset}
+        title="Reset Demo Database"
+        message="Are you sure you want to reset the database? This will restore all customer records, initial tickets, and approval queues back to their default demonstration seeds."
+        confirmText="Reset Database"
+        cancelText="Cancel"
+        variant="danger"
+        loading={resetting}
+        error={resetError}
+      />
     </div>
   );
 }

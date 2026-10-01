@@ -10,14 +10,7 @@ import {
   Layers,
   Cpu,
   CheckCircle2,
-  Lock,
-  Sparkles,
-  GitBranch,
-  Terminal,
-  Database,
-  Search,
-  Eye,
-  FileCheck
+  Lock
 } from 'lucide-react';
 
 export default function LandingPage() {
