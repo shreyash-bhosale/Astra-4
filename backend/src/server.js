@@ -17,6 +17,7 @@ import supervisorRoutes from './routes/supervisorRoutes.js';
 import autonomyRoutes from './routes/autonomyRoutes.js';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
+import { db } from './db/store.js';
 
 const app = express();
 
@@ -56,6 +57,58 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Serverless Lifecycle & Database Persistence Middleware
+app.use(async (req, res, next) => {
+  try {
+    // 1. Ingress: Ensure Supabase initial hydration is complete
+    await db.ready();
+
+    // 2. Refresh table on GET reads to guarantee real-time consistency across lambdas
+    if (req.method === 'GET') {
+      const p = req.path;
+      if (p.startsWith('/api/policies')) {
+        await db.refreshTable('policies');
+      } else if (p.startsWith('/api/tickets')) {
+        await db.refreshTable('tickets');
+      } else if (p.startsWith('/api/approvals')) {
+        await Promise.all([db.refreshTable('approvals'), db.refreshTable('tickets')]);
+      } else if (p.startsWith('/api/customers')) {
+        await db.refreshTable('customers');
+      } else if (p.startsWith('/api/orders')) {
+        await db.refreshTable('orders');
+      } else if (p.startsWith('/api/autonomy')) {
+        await db.refreshTable('autonomy_settings');
+      }
+    }
+  } catch (err) {
+    console.warn('[SERVER] Ingress lifecycle notice:', err.message);
+  }
+
+  // 3. Egress: Ensure all in-flight database writes flush to Supabase before response returns
+  const originalJson = res.json.bind(res);
+  const originalSend = res.send.bind(res);
+
+  res.json = async function (data) {
+    try {
+      await db.flush();
+    } catch (e) {
+      console.error('[SERVER] Flush error before res.json:', e.message);
+    }
+    return originalJson(data);
+  };
+
+  res.send = async function (data) {
+    try {
+      await db.flush();
+    } catch (e) {
+      console.error('[SERVER] Flush error before res.send:', e.message);
+    }
+    return originalSend(data);
+  };
+
+  next();
+});
 
 // Apply global rate limiting to all API routes
 app.use('/api', generalLimiter);

@@ -212,8 +212,7 @@ export class SupervisorAgent {
       const activeRuns = db.find('agent_runs', r => r.status === 'RUNNING' || r.status === 'WAITING_APPROVAL');
       for (const r of activeRuns) {
         db.update('agent_runs', r.id, {
-          status: 'PAUSED',
-          error_message: 'Halted immediately by Administrator Emergency Stop.'
+          status: 'PAUSED'
         });
         db.update('tickets', r.ticket_id, {
           status: 'WAITING_APPROVAL',

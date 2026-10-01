@@ -104,12 +104,28 @@ class ApiClient {
 
       return data;
     } catch (err) {
-      // If network fails (e.g. backend unreachable or blocked by CORS),
-      // fall back to client demo store so offline testing works cleanly
-      if (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        console.warn(`[ResolveAI] Backend unavailable at ${url}. Seamlessly using client demo store.`);
+      const isProduction =
+        typeof window !== 'undefined' &&
+        window.location &&
+        !['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+      const isMutation = options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase());
+
+      // In production, mutations must NEVER silently fall back to mock memory!
+      if (isProduction && isMutation) {
+        console.error(`[ResolveAI] Authoritative backend mutation failed at ${url}:`, err);
+        throw err;
+      }
+
+      // Offline dev / sandbox fallback only if explicitly requested or in local development
+      if (
+        (typeof window !== 'undefined' && window.location.search.includes('mock=true')) ||
+        (!isProduction && (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError')))
+      ) {
+        console.warn(`[ResolveAI] Backend unavailable at ${url}. Seamlessly using local demo store.`);
         return handleClientMock(endpoint, options);
       }
+
       console.error(`API Error on ${endpoint}:`, err);
       throw err;
     }

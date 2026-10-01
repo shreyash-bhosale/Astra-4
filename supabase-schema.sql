@@ -338,3 +338,89 @@ CREATE POLICY "Service role full access on email_notifications"
   TO service_role
   USING (true)
   WITH CHECK (true);
+
+-- Ensure agent_runs has error_message and tool_calls columns if present
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS error_message TEXT;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS tool_calls JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS verification_result JSONB;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS recovery_attempts INT DEFAULT 0;
+
+-- Ensure approvals has decision_type, decision_maker, rejection_reason
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS decision_type TEXT;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS decision_maker TEXT;
+ALTER TABLE approvals ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
+-- ==============================================================================
+-- 12. AUTONOMY SETTINGS TABLE
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS autonomy_settings (
+  id TEXT PRIMARY KEY,
+  enabled BOOLEAN DEFAULT TRUE,
+  paused BOOLEAN DEFAULT FALSE,
+  emergency_stopped BOOLEAN DEFAULT FALSE,
+  enabled_by TEXT,
+  enabled_at TIMESTAMPTZ,
+  approval_mode TEXT DEFAULT 'HYBRID',
+  autonomous_approvals_enabled BOOLEAN DEFAULT TRUE,
+  permissions JSONB DEFAULT '{}'::jsonb,
+  refund_limit NUMERIC DEFAULT 1000,
+  max_retries INT DEFAULT 2,
+  allowed_tools JSONB DEFAULT '[]'::jsonb,
+  restricted_tools JSONB DEFAULT '[]'::jsonb,
+  risk_policy JSONB DEFAULT '{}'::jsonb,
+  history JSONB DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE autonomy_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on autonomy_settings"
+  ON autonomy_settings FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- ==============================================================================
+-- 13. SUPERVISOR EVENTS TABLE
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS supervisor_events (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  severity TEXT DEFAULT 'INFO',
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE supervisor_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on supervisor_events"
+  ON supervisor_events FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- ==============================================================================
+-- 14. AGENT HEALTH TABLE
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS agent_health (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  badge TEXT,
+  status TEXT DEFAULT 'HEALTHY',
+  state TEXT DEFAULT 'ONLINE',
+  execution_count INT DEFAULT 0,
+  last_task TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE agent_health ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access on agent_health"
+  ON agent_health FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+

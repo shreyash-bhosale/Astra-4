@@ -86,9 +86,26 @@ export const createTicket = async (req, res, next) => {
   try {
     const validated = CreateTicketSchema.parse(req.body);
 
+    let customerId = validated.customer_id || null;
+    if (customerId && !db.findById('customers', customerId)) {
+      customerId = null;
+    }
+
+    let orderId = validated.order_id || null;
+    if (orderId && !db.findById('orders', orderId)) {
+      orderId = null;
+    }
+
+    let assignedUserId = req.user?.id || validated.assigned_user_id || null;
+    if (assignedUserId && !db.findById('users', assignedUserId)) {
+      assignedUserId = null;
+    }
+
     const ticket = db.insert('tickets', {
       ...validated,
-      assigned_user_id: req.user?.id || null,
+      customer_id: customerId,
+      order_id: orderId,
+      assigned_user_id: assignedUserId,
       status: 'OPEN'
     });
 
