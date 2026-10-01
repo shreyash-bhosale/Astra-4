@@ -7,6 +7,7 @@ import { actionAgent } from './actionAgent.js';
 import { communicationAgent } from './communicationAgent.js';
 import { verificationAgent } from './verificationAgent.js';
 import { aiService } from '../services/aiService.js';
+import { emailService } from '../services/emailService.js';
 import { PlanOutputSchema } from '../validators/index.js';
 
 export class OrchestratorAgent {
@@ -130,6 +131,11 @@ Formulate a 6-step resolution plan selecting from available agents:
         description: `Orchestrator formulated ${planData.steps.length}-step resolution plan: ${planData.objective}`,
         metadata: { objective: planData.objective, stepsCount: planData.steps.length }
       });
+
+      // Asynchronously dispatch Task Started customer notification
+      emailService.notifyTaskStarted({ ticket, customer }).catch(err => {
+        console.warn('[ORCHESTRATOR] Task started notification notice:', err.message);
+      });
     } else {
       planData = {
         objective: run.objective,
@@ -206,6 +212,15 @@ Formulate a 6-step resolution plan selecting from available agents:
     if (context.actionResult.status === 'WAITING_APPROVAL') {
       this.updateRunStepStatus(run.id, 4, 'WAITING_APPROVAL');
       db.update('agent_runs', run.id, { status: 'WAITING_APPROVAL' });
+
+      // Notify supervisor via internal approval requested email
+      const approval = db.findById('approvals', context.actionResult.approvalId);
+      if (approval) {
+        emailService.notifyApprovalRequested({ ticket, customer, approval }).catch(err => {
+          console.warn('[ORCHESTRATOR] Approval email notice:', err.message);
+        });
+      }
+
       return {
         status: 'WAITING_APPROVAL',
         runId: run.id,
@@ -215,6 +230,11 @@ Formulate a 6-step resolution plan selecting from available agents:
     }
 
     this.updateRunStepStatus(run.id, 4, 'COMPLETED');
+
+    // Notify customer that authorized action has executed
+    emailService.notifyActionCompleted({ ticket, customer, actionResult: context.actionResult }).catch(err => {
+      console.warn('[ORCHESTRATOR] Action completed email notice:', err.message);
+    });
 
     // Step 5: Communication Agent
     this.updateRunStepStatus(run.id, 5, 'RUNNING');
@@ -282,6 +302,17 @@ Formulate a 6-step resolution plan selecting from available agents:
         agent: verificationAgent.name,
         description: `Autonomous resolution verified and finalized. All audit gates satisfied.`,
         metadata: verificationResult
+      });
+
+      // Notify customer that case has been verified and resolved
+      emailService.notifyFinalResolution({
+        ticket,
+        customer,
+        resolutionSummary: context.communicationResult?.internalSummary,
+        customerMessage: context.communicationResult?.customerMessage,
+        referenceId: context.actionResult?.details?.replacementId || context.actionResult?.details?.orderId
+      }).catch(err => {
+        console.warn('[ORCHESTRATOR] Final resolution email notice:', err.message);
       });
 
       return {

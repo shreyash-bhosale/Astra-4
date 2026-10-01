@@ -11,6 +11,8 @@ import policyRoutes from './routes/policyRoutes.js';
 import approvalRoutes from './routes/approvalRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
+import customerPortalRoutes from './routes/customerPortalRoutes.js';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
 
@@ -62,6 +64,9 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/approvals', approvalRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/emails', emailRoutes);
+app.use('/api/customer', customerPortalRoutes);
+app.use('/api/system', systemRoutes);
 app.use('/api', systemRoutes);
 
 // Root fallback / ping

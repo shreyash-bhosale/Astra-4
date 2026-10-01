@@ -175,3 +175,70 @@ export const getTicketRuns = async (req, res, next) => {
     next(err);
   }
 };
+
+export const assignTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    const ticket = db.findById('tickets', id);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    let targetUser = null;
+    if (userId) {
+      targetUser = db.findById('users', userId);
+      if (!targetUser) return res.status(404).json({ error: 'Assigned user not found' });
+    }
+
+    const updated = db.update('tickets', id, {
+      assigned_user_id: targetUser ? targetUser.id : null
+    });
+
+    db.logAudit({
+      ticket_id: id,
+      event_type: 'TICKET_ASSIGNED',
+      agent: req.user?.name || 'Supervisor',
+      description: targetUser ? `Ticket assigned to ${targetUser.name} (${targetUser.role})` : 'Ticket unassigned'
+    });
+
+    return res.json({ success: true, ticket: updated, assignedUser: targetUser });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addInternalNote = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { note } = req.body;
+    if (!note || !note.trim()) {
+      return res.status(400).json({ error: 'Note cannot be empty.' });
+    }
+
+    const ticket = db.findById('tickets', id);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    const existingNotes = ticket.internal_notes || [];
+    const newNote = {
+      id: `note-${Date.now()}`,
+      author: req.user?.name || 'Staff Member',
+      authorRole: req.user?.role || 'manager',
+      content: note.trim(),
+      created_at: new Date().toISOString()
+    };
+
+    const updated = db.update('tickets', id, {
+      internal_notes: [...existingNotes, newNote]
+    });
+
+    db.logAudit({
+      ticket_id: id,
+      event_type: 'INTERNAL_NOTE_ADDED',
+      agent: req.user?.name || 'Manager',
+      description: `Internal note added by ${req.user?.name || 'Staff'}`
+    });
+
+    return res.json({ success: true, notes: updated.internal_notes });
+  } catch (err) {
+    next(err);
+  }
+};

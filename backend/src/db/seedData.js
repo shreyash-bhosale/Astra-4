@@ -28,10 +28,35 @@ export const getInitialData = () => {
       password_hash: defaultPasswordHash,
       role: 'admin',
       created_at: '2026-09-10T08:00:00.000Z'
+    },
+    {
+      id: 'usr-customer-01',
+      name: 'Elena Rostova',
+      email: 'customer@resolveai.io',
+      password_hash: defaultPasswordHash,
+      role: 'customer',
+      created_at: '2026-09-01T08:00:00.000Z'
+    },
+    {
+      id: 'usr-customer-02',
+      name: 'Elena Rostova',
+      email: 'elena.rostova@acmecorp.com',
+      password_hash: defaultPasswordHash,
+      role: 'customer',
+      created_at: '2026-09-01T08:00:00.000Z'
     }
   ];
 
   const customers = [
+    {
+      id: 'cust-100',
+      name: 'Elena Rostova',
+      email: 'customer@resolveai.io',
+      phone: '+1 (415) 555-0192',
+      tier: 'VIP Enterprise',
+      company: 'Acme Corp',
+      created_at: '2025-11-12T10:00:00.000Z'
+    },
     {
       id: 'cust-101',
       name: 'Elena Rostova',

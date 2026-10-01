@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   priority TEXT NOT NULL DEFAULT 'medium',
   category TEXT,
   assigned_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  internal_notes JSONB DEFAULT '[]'::jsonb,
   resolution_summary TEXT,
   customer_response TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -123,3 +124,27 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 10. Email Notifications Table
+CREATE TABLE IF NOT EXISTS email_notifications (
+  id TEXT PRIMARY KEY,
+  ticket_id TEXT REFERENCES tickets(id) ON DELETE CASCADE,
+  customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+  event_type TEXT NOT NULL,
+  recipient TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body_text TEXT,
+  body_html TEXT,
+  provider TEXT DEFAULT 'resend',
+  provider_message_id TEXT,
+  status TEXT NOT NULL DEFAULT 'QUEUED',
+  attempt_count INT DEFAULT 1,
+  error_message TEXT,
+  idempotency_key TEXT,
+  sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_notifications_ticket ON email_notifications(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_email_notifications_idempotency ON email_notifications(idempotency_key);
+

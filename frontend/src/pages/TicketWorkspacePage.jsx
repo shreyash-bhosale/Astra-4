@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import confetti from 'canvas-confetti';
 import RejectionModal from '../components/RejectionModal';
+import SendUpdateModal from '../components/SendUpdateModal';
+import EmailNotificationList from '../components/EmailNotificationList';
 import {
   Sparkles,
   ShieldAlert,
@@ -14,7 +16,12 @@ import {
   Package,
   User,
   RefreshCw,
-  FileCheck
+  FileCheck,
+  Mail,
+  UserCheck,
+  Lock,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 
 export default function TicketWorkspacePage() {
@@ -34,6 +41,20 @@ export default function TicketWorkspacePage() {
   const [rejecting, setRejecting] = useState(false);
   const [rejectionError, setRejectionError] = useState('');
 
+  // Email notifications & manual update state
+  const [emails, setEmails] = useState([]);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [sendUpdateOpen, setSendUpdateOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendEmailError, setSendEmailError] = useState('');
+  const [retryingEmailId, setRetryingEmailId] = useState(null);
+
+  // Ticket assignment & internal notes state
+  const [assigning, setAssigning] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+
   const retryCountRef = useRef(0);
 
   const fetchTicket = useCallback(async () => {
@@ -49,8 +70,21 @@ export default function TicketWorkspacePage() {
     }
   }, [id]);
 
+  const fetchEmails = useCallback(async () => {
+    try {
+      setEmailLoading(true);
+      const emailList = await api.getTicketEmails(id);
+      setEmails(emailList || []);
+    } catch (err) {
+      console.warn('Failed to load ticket emails:', err);
+    } finally {
+      setEmailLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchTicket();
+    fetchEmails();
 
     let timeoutId = null;
     let isCancelled = false;
@@ -98,7 +132,7 @@ export default function TicketWorkspacePage() {
     setRunning(true);
     try {
       const result = await api.runWorkflow(id);
-      await fetchTicket();
+      await Promise.all([fetchTicket(), fetchEmails()]);
       if (result.status === 'RESOLVED') {
         confetti({
           particleCount: 80,
@@ -118,7 +152,7 @@ export default function TicketWorkspacePage() {
     setActionError('');
     try {
       const res = await api.approve(approvalId);
-      await fetchTicket();
+      await Promise.all([fetchTicket(), fetchEmails()]);
       if (res.workflowStatus?.status === 'RESOLVED') {
         confetti({
           particleCount: 100,
@@ -130,6 +164,33 @@ export default function TicketWorkspacePage() {
       setActionError(err.message || 'Approval authorization failed');
     } finally {
       setApproving(false);
+    }
+  };
+
+  const handleSendCustomerUpdate = async (payload) => {
+    setSendingEmail(true);
+    setSendEmailError('');
+    try {
+      await api.sendTicketUpdateEmail(id, payload);
+      setSendUpdateOpen(false);
+      await Promise.all([fetchEmails(), fetchTicket()]);
+    } catch (err) {
+      setSendEmailError(err.message || 'Failed to send update email');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleRetryEmail = async (emailId) => {
+    setRetryingEmailId(emailId);
+    try {
+      await api.retryEmail(emailId);
+      await fetchEmails();
+    } catch (err) {
+      console.error('Email retry failed:', err);
+      setActionError(err.message || 'Failed to retry email delivery');
+    } finally {
+      setRetryingEmailId(null);
     }
   };
 
@@ -171,6 +232,52 @@ export default function TicketWorkspacePage() {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.warn('Clipboard write failed:', err);
+    }
+  };
+
+  const handleAssignTicket = async (userId) => {
+    setAssigning(true);
+    setAssignSuccess('');
+    setActionError('');
+    try {
+      await api.assignTicket(id, userId || null);
+      setTicket(prev => ({
+        ...prev,
+        assigned_user_id: userId || null
+      }));
+      setAssignSuccess('Assignment updated');
+      setTimeout(() => setAssignSuccess(''), 3000);
+      fetchTicket();
+    } catch (err) {
+      setActionError(err.message || 'Failed to update assignment');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleAddInternalNote = async (e) => {
+    e.preventDefault();
+    if (!noteContent.trim()) return;
+    setAddingNote(true);
+    setActionError('');
+    try {
+      const res = await api.addTicketInternalNote(id, noteContent.trim());
+      setTicket(prev => ({
+        ...prev,
+        internal_notes: res.notes || [...(prev.internal_notes || []), {
+          id: `note-${Date.now()}`,
+          author: 'Current Staff',
+          authorRole: 'agent',
+          content: noteContent.trim(),
+          created_at: new Date().toISOString()
+        }]
+      }));
+      setNoteContent('');
+      fetchTicket();
+    } catch (err) {
+      setActionError(err.message || 'Failed to add internal note');
+    } finally {
+      setAddingNote(false);
     }
   };
 
@@ -249,8 +356,25 @@ export default function TicketWorkspacePage() {
           </div>
         </div>
 
-        {/* Start / Run Autonomous Agent Button */}
+        {/* Start / Run Autonomous Agent Button & Manual Send Update */}
         <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => {
+              setSendEmailError('');
+              setSendUpdateOpen(true);
+            }}
+            className="btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              paddingInline: '16px'
+            }}
+          >
+            <Mail size={16} />
+            <span>Send Update</span>
+          </button>
+
           <button
             onClick={handleRunAI}
             disabled={running || ticket.status === 'RESOLVED' || ticket.status === 'WAITING_APPROVAL'}
@@ -344,6 +468,135 @@ export default function TicketWorkspacePage() {
               )}
             </div>
           )}
+
+          {/* Manager Ticket Assignment */}
+          <div style={{ padding: '20px', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                <UserCheck size={15} />
+                <span>Assigned Staff</span>
+              </div>
+              {assignSuccess && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+                  ✓ {assignSuccess}
+                </span>
+              )}
+            </div>
+
+            <select
+              value={ticket.assigned_user_id || ''}
+              onChange={(e) => handleAssignTicket(e.target.value)}
+              disabled={assigning}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="">Unassigned (Queue)</option>
+              <option value="usr-agent-01">Sarah Connor (Support Agent)</option>
+              <option value="usr-manager-01">James Rodriguez (Operations Manager)</option>
+              <option value="usr-admin-01">Marcus Vance (Lead Administrator)</option>
+            </select>
+          </div>
+
+          {/* Private Internal Notes (Staff-only) */}
+          <div style={{ padding: '20px', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+                <Lock size={15} color="var(--accent-amber)" />
+                <span>Internal Notes</span>
+              </div>
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                Staff Only
+              </span>
+            </div>
+
+            {/* Notes List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', marginBottom: '12px' }}>
+              {(!ticket.internal_notes || ticket.internal_notes.length === 0) ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}>
+                  No internal notes yet.
+                </div>
+              ) : (
+                ticket.internal_notes.map((note) => (
+                  <div
+                    key={note.id}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: '0.82rem'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.78rem' }}>
+                        {note.author} ({note.authorRole || 'staff'})
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                        {new Date(note.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                      {note.content}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Note Form */}
+            <form onSubmit={handleAddInternalNote} style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Add private note..."
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.82rem',
+                  outline: 'none'
+                }}
+              />
+              <button
+                type="submit"
+                disabled={addingNote || !noteContent.trim()}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--text-primary)',
+                  color: 'var(--bg-primary)',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  opacity: (!noteContent.trim() || addingNote) ? 0.6 : 1
+                }}
+              >
+                {addingNote ? (
+                  <RefreshCw size={13} className="spin" />
+                ) : (
+                  <Send size={13} />
+                )}
+              </button>
+            </form>
+          </div>
         </div>
 
         {/* Center Column (Columns 5-8): Resolution Plan & Approval Modal */}
@@ -527,6 +780,15 @@ export default function TicketWorkspacePage() {
               )}
             </div>
           )}
+
+          {/* Email Notifications & Customer Update Dispatch Log */}
+          <EmailNotificationList
+            emails={emails}
+            onRetry={handleRetryEmail}
+            retryingId={retryingEmailId}
+            onRefresh={fetchEmails}
+            loading={emailLoading}
+          />
         </div>
 
         {/* Right Column (Columns 9-12): Real-Time Agent Audit Timeline */}
@@ -619,6 +881,19 @@ export default function TicketWorkspacePage() {
         actionName={targetApproval?.action || 'action'}
         loading={rejecting}
         error={rejectionError}
+      />
+
+      {/* Manual Customer Update & Live Email Preview Modal */}
+      <SendUpdateModal
+        isOpen={sendUpdateOpen}
+        onClose={() => {
+          setSendUpdateOpen(false);
+          setSendEmailError('');
+        }}
+        ticket={ticket}
+        onSend={handleSendCustomerUpdate}
+        loading={sendingEmail}
+        error={sendEmailError}
       />
     </div>
   );

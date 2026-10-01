@@ -41,13 +41,22 @@ export const requireAuth = async (req, res, next) => {
   // 2. Fallback to local JWT verification (for unit tests and local tokens)
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    const user = db.findById('users', decoded.id) || db.findOne('users', u => u.email.toLowerCase() === decoded.email?.toLowerCase());
+    let user = db.findById('users', decoded.id) || db.findOne('users', u => u.email.toLowerCase() === decoded.email?.toLowerCase());
 
     if (!user) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'User account no longer exists.'
-      });
+      if (decoded.email) {
+        user = db.insert('users', {
+          id: decoded.id || `usr-${Date.now()}`,
+          name: decoded.name || decoded.email.split('@')[0],
+          email: decoded.email,
+          role: decoded.role || 'customer'
+        });
+      } else {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'User account no longer exists.'
+        });
+      }
     }
 
     req.user = {

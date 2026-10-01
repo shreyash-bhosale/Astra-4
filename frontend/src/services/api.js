@@ -133,6 +133,24 @@ class ApiClient {
     return this.request(`/tickets/${ticketId}/runs`);
   }
 
+  // Email Notifications
+  getTicketEmails(ticketId) {
+    return this.request(`/tickets/${ticketId}/emails`);
+  }
+
+  sendTicketUpdateEmail(ticketId, data) {
+    return this.request(`/tickets/${ticketId}/send-update`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  retryEmail(emailId) {
+    return this.request(`/emails/${emailId}/retry`, {
+      method: 'POST'
+    });
+  }
+
   // Approvals
   getApprovals(status) {
     const q = status ? `?status=${status}` : '';
@@ -182,6 +200,64 @@ class ApiClient {
       method: 'PATCH',
       body: JSON.stringify(updates)
     });
+  }
+
+  // Customer Portal Endpoints
+  getCustomerProfile() {
+    return this.request('/customer/me');
+  }
+
+  getCustomerTickets() {
+    return this.request('/customer/tickets');
+  }
+
+  createCustomerTicket(ticketData) {
+    return this.request('/customer/tickets', {
+      method: 'POST',
+      body: JSON.stringify(ticketData)
+    });
+  }
+
+  getCustomerTicket(id) {
+    return this.request(`/customer/tickets/${id}`);
+  }
+
+  getCustomerTicketTimeline(id) {
+    return this.request(`/customer/tickets/${id}/timeline`);
+  }
+
+  getCustomerOrders() {
+    return this.request('/customer/orders');
+  }
+
+  getCustomerNotifications() {
+    return this.request('/customer/notifications');
+  }
+
+  sendCustomerChatMessage(message) {
+    return this.request('/customer/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message })
+    });
+  }
+
+  // Manager Command Center Upgrades
+  assignTicket(ticketId, userId) {
+    return this.request(`/tickets/${ticketId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+  }
+
+  addTicketInternalNote(ticketId, note) {
+    return this.request(`/tickets/${ticketId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ note })
+    });
+  }
+
+  globalSearch(query) {
+    return this.request(`/system/search?q=${encodeURIComponent(query)}`);
   }
 
   // Activity & System

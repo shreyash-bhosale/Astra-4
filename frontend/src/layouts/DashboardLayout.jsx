@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import ThemeToggle from '../components/ThemeToggle';
+import CommandPalette from '../components/CommandPalette';
 import {
   LayoutDashboard,
   TicketCheck,
@@ -17,7 +18,9 @@ import {
   RefreshCw,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Search,
+  ExternalLink
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -27,6 +30,18 @@ export default function DashboardLayout({ children }) {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const fetchApprovalsCount = async () => {
     try {
@@ -253,9 +268,31 @@ export default function DashboardLayout({ children }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Global Search Button */}
+            <button
+              onClick={() => setCommandPaletteOpen(true)}
+              title="Search (⌘K)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              <Search size={14} />
+              <span>Search...</span>
+              <kbd style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', fontWeight: 600 }}>⌘K</kbd>
+            </button>
+
             {/* Quick Persona Switcher for Hackathon Demo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Demo Persona:</span>
+              <span style={{ color: 'var(--text-muted)' }}>Demo:</span>
               <button
                 onClick={() => loginWithDemo('agent')}
                 style={{
@@ -282,6 +319,24 @@ export default function DashboardLayout({ children }) {
               >
                 Manager
               </button>
+              <button
+                onClick={() => navigate('/customer')}
+                title="Open Customer Portal"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                <ExternalLink size={12} />
+                <span>Portal</span>
+              </button>
             </div>
 
             {/* Theme Toggle Button */}
@@ -303,6 +358,12 @@ export default function DashboardLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Global Command Palette */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
 
       <style>{`
         @keyframes spin {

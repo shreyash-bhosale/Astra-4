@@ -1,5 +1,6 @@
 import { db } from '../db/store.js';
 import { orchestratorAgent } from '../agents/orchestrator.js';
+import { emailService } from '../services/emailService.js';
 
 export const listApprovals = async (req, res, next) => {
   try {
@@ -59,6 +60,14 @@ export const approveAction = async (req, res, next) => {
       description: `Authorized sensitive action '${approval.action}' for ticket #${approval.ticket_id.slice(0, 8)}`,
       metadata: { approvalId: id, action: approval.action }
     });
+
+    const ticket = db.findById('tickets', approval.ticket_id);
+    const customer = ticket?.customer_id ? db.findById('customers', ticket.customer_id) : null;
+    if (ticket && customer) {
+      emailService.notifyApprovalCompleted({ ticket, customer, approval }).catch(err => {
+        console.warn('[APPROVAL] Approval completed notification notice:', err.message);
+      });
+    }
 
     // Automatically resume orchestrator workflow!
     const resumeResult = await orchestratorAgent.runWorkflow({

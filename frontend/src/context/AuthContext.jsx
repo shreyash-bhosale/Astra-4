@@ -30,7 +30,7 @@ const mapAuthError = (err) => {
 const formatUserFromSupabase = (supaUser) => {
   if (!supaUser) return null;
   const role = supaUser.user_metadata?.role ||
-    (supaUser.email?.includes('admin') ? 'admin' : supaUser.email?.includes('manager') ? 'manager' : 'agent');
+    (supaUser.email?.includes('customer') ? 'customer' : supaUser.email?.includes('admin') ? 'admin' : supaUser.email?.includes('manager') ? 'manager' : 'agent');
   const name = supaUser.user_metadata?.name ||
     supaUser.email?.split('@')[0] || 'User';
 
@@ -165,6 +165,7 @@ export const AuthProvider = ({ children }) => {
     let email = 'agent@resolveai.io';
     if (role === 'manager') email = 'manager@resolveai.io';
     if (role === 'admin') email = 'admin@resolveai.io';
+    if (role === 'customer') email = 'customer@resolveai.io';
 
     return await login(email, 'password123');
   };

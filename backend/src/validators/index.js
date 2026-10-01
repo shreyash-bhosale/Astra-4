@@ -57,6 +57,13 @@ export const ReviewApprovalSchema = z.object({
   notes: z.string().optional()
 });
 
+// Email Notifications
+export const SendCustomerEmailSchema = z.object({
+  recipient: z.string().email('Invalid recipient email address').optional(),
+  subject: z.string().min(3, 'Subject must be at least 3 characters').max(200, 'Subject too long'),
+  message: z.string().min(5, 'Message must be at least 5 characters').max(5000, 'Message exceeds 5000 characters')
+});
+
 // ==========================================
 // AI AGENT OUTPUT SCHEMAS (PRD Section 33)
 // ==========================================

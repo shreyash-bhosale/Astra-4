@@ -112,5 +112,38 @@ export const tools = {
     });
 
     return result;
+  },
+
+  // Allowlisted Communication Agent Tool: Send Customer Update Email
+  async send_customer_update_email({ ticketId, eventType = 'TASK_UPDATE', recipient, subject, message }) {
+    if (!ticketId) return { error: 'Ticket ID is required' };
+    const ticket = db.findById('tickets', ticketId);
+    if (!ticket) return { error: `Ticket #${ticketId} not found` };
+
+    const customer = ticket.customer_id ? db.findById('customers', ticket.customer_id) : null;
+    if (!customer) return { error: 'Customer record not found for ticket' };
+
+    // Security verification: recipient must strictly match verified customer email
+    if (recipient && recipient.trim().toLowerCase() !== customer.email.trim().toLowerCase()) {
+      return {
+        error: 'Recipient address mismatch: Agent communication is restricted exclusively to the customer of record.'
+      };
+    }
+
+    const { emailService } = await import('../services/emailService.js');
+    const result = await emailService.sendManualUpdate({
+      ticket,
+      customer,
+      customSubject: subject,
+      message,
+      senderUser: { name: 'ResolveAI Communication Agent' }
+    });
+
+    return {
+      success: result.success,
+      status: result.status,
+      messageId: result.messageId,
+      recipient: customer.email
+    };
   }
 };

@@ -20,7 +20,8 @@ const TABLES = [
   'agent_runs',
   'agent_steps',
   'approvals',
-  'audit_logs'
+  'audit_logs',
+  'email_notifications'
 ];
 
 export class Repository {

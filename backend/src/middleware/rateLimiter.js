@@ -35,3 +35,16 @@ export const aiWorkflowLimiter = rateLimit({
     message: 'Autonomous agent execution rate limit reached. Please wait a moment before launching new agent workflows.'
   }
 });
+
+// Email Notification Rate Limiter
+export const emailRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 email actions per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too Many Requests',
+    message: 'Email dispatch rate limit reached. Please wait a moment before sending another notification.'
+  }
+});
+

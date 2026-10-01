@@ -31,6 +31,9 @@ export const config = {
   supabaseUrl: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  resendApiKey: process.env.RESEND_API_KEY || process.env.EMAIL_PROVIDER_API_KEY || '',
+  emailFrom: process.env.EMAIL_FROM || 'ResolveAI Operations <notifications@resolveai.io>',
+  managerNotificationEmail: process.env.MANAGER_NOTIFICATION_EMAIL || 'manager@resolveai.io',
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
   databaseMode: process.env.DATABASE_MODE || (process.env.NODE_ENV === 'production' && (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ? 'supabase' : 'local')

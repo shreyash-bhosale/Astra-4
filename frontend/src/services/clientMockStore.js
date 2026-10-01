@@ -170,6 +170,23 @@ const SEED_DATA = {
       description: 'Approval requested for create_replacement_request.',
       created_at: '2026-09-22T10:18:00.000Z'
     }
+  ],
+  email_notifications: [
+    {
+      id: 'eml-1001',
+      ticket_id: 'tkt-001',
+      customer_id: 'cust-101',
+      event_type: 'TASK_STARTED',
+      recipient: 'elena.rostova@acmecorp.com',
+      subject: 'ResolveAI — Your Request Is Being Processed [Ticket #tkt-001]',
+      body_text: 'ResolveAI has received your customer support case and begun autonomous investigation.',
+      provider: 'resend',
+      provider_message_id: 'msg_resend_live_84920482910',
+      status: 'SENT',
+      attempt_count: 1,
+      created_at: '2026-09-28T16:01:00.000Z',
+      sent_at: '2026-09-28T16:01:01.000Z'
+    }
   ]
 };
 
@@ -324,6 +341,63 @@ export function handleClientMock(endpoint, options = {}) {
       saveStorage(store);
     }
     return { success: true, message: 'Action approved successfully.' };
+  }
+
+  // Emails: GET /tickets/:id/emails
+  if (endpoint.includes('/emails') && method === 'GET') {
+    const parts = endpoint.split('/');
+    const tId = parts[2];
+    const emails = (store.email_notifications || []).filter(e => e.ticket_id === tId);
+    return emails;
+  }
+
+  // Emails: POST /tickets/:id/send-update
+  if (endpoint.includes('/send-update') && method === 'POST') {
+    const parts = endpoint.split('/');
+    const tId = parts[2];
+    const tkt = store.tickets.find(t => t.id === tId);
+    const cust = tkt ? store.customers.find(c => c.id === tkt.customer_id) : null;
+    const newEmail = {
+      id: `eml-${Date.now().toString().slice(-4)}`,
+      ticket_id: tId,
+      customer_id: cust?.id || null,
+      event_type: 'MANUAL_UPDATE',
+      recipient: cust?.email || 'customer@example.com',
+      subject: body.subject || `ResolveAI — Update on Ticket #${tId}`,
+      body_text: body.message,
+      provider: 'resend',
+      provider_message_id: `msg_resend_live_${Date.now()}`,
+      status: 'SENT',
+      attempt_count: 1,
+      created_at: new Date().toISOString(),
+      sent_at: new Date().toISOString()
+    };
+    if (!store.email_notifications) store.email_notifications = [];
+    store.email_notifications.unshift(newEmail);
+    store.audit_logs.push({
+      id: `log-${Date.now()}`,
+      ticket_id: tId,
+      event_type: 'EMAIL_SENT',
+      agent: 'Communication Agent',
+      description: `Dispatched customer update: "${newEmail.subject}" to <${newEmail.recipient}>.`,
+      metadata: { messageId: newEmail.provider_message_id, status: 'SENT' },
+      created_at: new Date().toISOString()
+    });
+    saveStorage(store);
+    return { success: true, emailNotification: newEmail };
+  }
+
+  // Emails: POST /emails/:id/retry
+  if (endpoint.startsWith('/emails/') && endpoint.endsWith('/retry') && method === 'POST') {
+    const emailId = endpoint.split('/')[2];
+    const eml = (store.email_notifications || []).find(e => e.id === emailId);
+    if (eml) {
+      eml.status = 'SENT';
+      eml.attempt_count = (eml.attempt_count || 1) + 1;
+      eml.sent_at = new Date().toISOString();
+      saveStorage(store);
+    }
+    return { success: true, message: 'Email retried successfully.' };
   }
 
   // Customers, Orders, Policies, Activity, Health

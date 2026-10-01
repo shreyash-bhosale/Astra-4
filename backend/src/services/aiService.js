@@ -99,6 +99,47 @@ ${prompt}`;
     console.warn('All Gemini models exhausted or timed out. Falling back to deterministic agent reasoning.');
     return null;
   }
+
+  async generateText({ prompt, temperature = 0.4 }) {
+    if (!this.apiKey) return null;
+
+    for (const model of this.models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature,
+              maxOutputTokens: 500
+            }
+          })
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const data = await response.json();
+        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (candidateText) {
+          return candidateText.trim();
+        }
+      } catch (err) {
+        console.warn(`AI text request error on model ${model}:`, err.message);
+      }
+    }
+    return null;
+  }
 }
 
 export const aiService = new AIService();
+

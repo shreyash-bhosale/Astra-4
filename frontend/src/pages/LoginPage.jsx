@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, UserCheck, Shield, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowRight, UserCheck, Shield, Sparkles, AlertCircle, User } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function LoginPage() {
@@ -17,8 +17,12 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const loggedUser = await login(email, password);
+      if (loggedUser?.role === 'customer') {
+        navigate('/customer');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -30,8 +34,12 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await loginWithDemo(role);
-      navigate('/dashboard');
+      const loggedUser = await loginWithDemo(role);
+      if (role === 'customer' || loggedUser?.role === 'customer') {
+        navigate('/customer');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Demo login failed');
     } finally {
@@ -147,6 +155,31 @@ export default function LoginPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Shield size={16} />
                 <span>James Rodriguez (Manager / Approver)</span>
+              </div>
+              <ArrowRight size={14} color="var(--text-muted)" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickDemo('customer')}
+              disabled={loading}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--bg-primary)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                transition: 'all var(--transition-fast)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={16} />
+                <span>Elena Rostova (Customer Persona)</span>
               </div>
               <ArrowRight size={14} color="var(--text-muted)" />
             </button>
