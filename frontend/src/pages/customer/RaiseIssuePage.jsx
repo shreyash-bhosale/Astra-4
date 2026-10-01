@@ -10,7 +10,8 @@ import {
   Send,
   Sparkles,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  PlusCircle
 } from 'lucide-react';
 
 const CATEGORIES = [

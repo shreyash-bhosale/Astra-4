@@ -23,7 +23,8 @@ import {
   Zap,
   Layers,
   Activity,
-  UserCheck
+  UserCheck,
+  ExternalLink
 } from 'lucide-react';
 
 export default function AIControlCenterPage() {
