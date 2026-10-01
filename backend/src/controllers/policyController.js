@@ -26,7 +26,26 @@ export const getPolicy = async (req, res, next) => {
 export const createPolicy = async (req, res, next) => {
   try {
     const validated = CreatePolicySchema.parse(req.body);
-    const policy = db.insert('policies', validated);
+    const existing = db.find('policies');
+
+    let policyId = validated.id;
+    if (!policyId) {
+      let nextNum = existing.length + 1;
+      policyId = `POL-${String(nextNum).padStart(3, '0')}`;
+      while (existing.some(p => p.id === policyId)) {
+        nextNum++;
+        policyId = `POL-${String(nextNum).padStart(3, '0')}`;
+      }
+    } else {
+      if (existing.some(p => p.id === policyId)) {
+        return res.status(409).json({ error: `Policy with ID ${policyId} already exists` });
+      }
+    }
+
+    const policy = db.insert('policies', {
+      id: policyId,
+      ...validated
+    });
     return res.status(201).json(policy);
   } catch (err) {
     next(err);

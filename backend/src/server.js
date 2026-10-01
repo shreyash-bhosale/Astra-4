@@ -20,13 +20,13 @@ import { generalLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 
-// Allowed Origins
 const allowedOrigins = [
   config.frontendUrl,
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-  'https://astra4-delta.vercel.app'
+  'https://astra4-delta.vercel.app',
+  'https://astra-4-opal.vercel.app'
 ].filter(Boolean);
 
 // CORS Configuration
@@ -35,18 +35,20 @@ app.use(cors({
     // Allow non-browser requests (like server-to-server, curl, tests)
     if (!origin) return callback(null, true);
 
+    if (
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1') ||
+      origin.endsWith('.vercel.app') ||
+      allowedOrigins.includes(origin)
+    ) {
+      return callback(null, true);
+    }
+
     if (config.isProduction) {
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
       return callback(new Error(`CORS policy violation: Origin '${origin}' is not authorized.`));
     }
 
-    // Development mode
-    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS policy violation in dev: Origin '${origin}' is not authorized.`));
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],

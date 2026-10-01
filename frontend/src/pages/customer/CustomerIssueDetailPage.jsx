@@ -23,23 +23,54 @@ export default function CustomerIssueDetailPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let isCancelled = false;
+    let timerId = null;
+
     async function loadData() {
       try {
-        setLoading(true);
         const [ticketData, timelineData] = await Promise.all([
           api.getCustomerTicket(id),
           api.getCustomerTicketTimeline(id).catch(() => [])
         ]);
 
-        setTicket(ticketData);
-        setTimeline(Array.isArray(timelineData) ? timelineData : []);
+        if (!isCancelled) {
+          setTicket(ticketData);
+          setTimeline(Array.isArray(timelineData) ? timelineData : []);
+          setLoading(false);
+
+          // Continue polling if ticket is active
+          if (ticketData && ticketData.status !== 'RESOLVED' && ticketData.status !== 'FAILED') {
+            if (document.visibilityState === 'visible') {
+              timerId = setTimeout(loadData, 4000);
+            }
+          }
+        }
       } catch (err) {
-        setError(err.message || 'Unable to load ticket details.');
-      } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setError(err.message || 'Unable to load ticket details.');
+          setLoading(false);
+        }
       }
     }
+
     loadData();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !timerId) {
+        loadData();
+      } else if (document.visibilityState === 'hidden' && timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isCancelled = true;
+      if (timerId) clearTimeout(timerId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [id]);
 
   if (loading) {

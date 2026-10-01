@@ -51,7 +51,10 @@ export default function DashboardLayout({ children }) {
         api.getApprovals('PENDING'),
         api.getSupervisorStatus().catch(() => null)
       ]);
-      setPendingApprovalsCount(res.length);
+      const pending = Array.isArray(res) 
+        ? res.filter(a => a.status === 'PENDING' || a.status === 'ESCALATED') 
+        : [];
+      setPendingApprovalsCount(pending.length);
       if (supRes?.supervisor) {
         setAutonomyActive(supRes.supervisor.mode === 'AUTONOMOUS');
       }

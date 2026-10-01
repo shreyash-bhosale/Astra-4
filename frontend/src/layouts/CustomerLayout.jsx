@@ -21,6 +21,33 @@ export default function CustomerLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchNotifs = async () => {
+      try {
+        const data = await api.getCustomerNotifications();
+        if (isMounted && Array.isArray(data)) {
+          setNotifications(data);
+        }
+      } catch (err) {
+        // silent
+      }
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 8000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
 
   const navItems = [
     { to: '/customer', label: 'Home', icon: Home, end: true },
@@ -172,6 +199,112 @@ export default function CustomerLayout({ children }) {
               <PlusCircle size={15} />
               <span>Raise Issue</span>
             </Link>
+
+            {/* Notifications Bell & Dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setNotifOpen(prev => !prev)}
+                aria-label="View notifications"
+                style={{
+                  position: 'relative',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: 'var(--radius-pill)',
+                  backgroundColor: notifOpen ? 'var(--bg-tertiary)' : 'transparent',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <Bell size={16} />
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      minWidth: '16px',
+                      height: '16px',
+                      padding: '0 4px',
+                      borderRadius: '8px',
+                      backgroundColor: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 0 4px rgba(239, 68, 68, 0.6)'
+                    }}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: '320px',
+                    backgroundColor: 'var(--bg-primary)',
+                    border: '1px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: 'var(--shadow-elevated)',
+                    zIndex: 200,
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>Notifications</div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllRead}
+                        style={{ background: 'none', border: 'none', color: 'var(--accent-blue)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                        No notifications yet.
+                      </div>
+                    ) : (
+                      notifications.map(notif => (
+                        <div
+                          key={notif.id}
+                          style={{
+                            padding: '12px 16px',
+                            borderBottom: '1px solid var(--border-light)',
+                            backgroundColor: notif.read ? 'transparent' : 'var(--bg-secondary)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                              {notif.subject || 'Case Update'}
+                            </div>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                              {notif.created_at ? new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebKitLineClamp: 2, WebKitBoxOrient: 'vertical' }}>
+                            {notif.message}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <ThemeToggle />
 

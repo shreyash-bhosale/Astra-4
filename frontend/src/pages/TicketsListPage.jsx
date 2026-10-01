@@ -54,6 +54,37 @@ export default function TicketsListPage() {
 
   useEffect(() => {
     fetchData();
+
+    let intervalId = null;
+    const startPolling = () => {
+      if (document.visibilityState === 'visible' && !intervalId) {
+        intervalId = setInterval(fetchData, 5000);
+      }
+    };
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    startPolling();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const handleCreateTicket = async (e) => {

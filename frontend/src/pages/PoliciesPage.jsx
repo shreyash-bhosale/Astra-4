@@ -10,10 +10,13 @@ export default function PoliciesPage() {
   const [category, setCategory] = useState('damaged_product');
   const [content, setContent] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState(null);
+
   const fetchPolicies = async () => {
     try {
       const data = await api.getPolicies();
-      setPolicies(data);
+      setPolicies(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -27,19 +30,37 @@ export default function PoliciesPage() {
 
   const handleCreatePolicy = async (e) => {
     e.preventDefault();
+    setFormError(null);
+    if (!title.trim() || title.trim().length < 3) {
+      setFormError('Title must be at least 3 characters.');
+      return;
+    }
+    if (!content.trim() || content.trim().length < 10) {
+      setFormError('Policy conditions must be at least 10 characters.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await api.createPolicy({
-        title,
+      const newPolicy = await api.createPolicy({
+        title: title.trim(),
         category,
-        content,
+        content: content.trim(),
         active: true
       });
       setShowModal(false);
       setTitle('');
       setContent('');
+      setCategory('damaged_product');
+      // Optimistically add or refresh
+      if (newPolicy && newPolicy.id) {
+        setPolicies(prev => [newPolicy, ...prev.filter(p => p.id !== newPolicy.id)]);
+      }
       await fetchPolicies();
     } catch (err) {
-      alert('Failed to save policy: ' + err.message);
+      setFormError(err.message || 'Failed to save policy');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -154,6 +175,11 @@ export default function PoliciesPage() {
             </div>
 
             <form onSubmit={handleCreatePolicy} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {formError && (
+                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '0.85rem' }}>
+                  {formError}
+                </div>
+              )}
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
                   Policy Title
@@ -202,18 +228,20 @@ export default function PoliciesPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => { setShowModal(false); setFormError(null); }}
                   className="btn-secondary"
+                  disabled={isSubmitting}
                   style={{ height: '42px', paddingInline: '20px' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn-primary"
-                  style={{ height: '42px', paddingInline: '24px' }}
+                  style={{ height: '42px', paddingInline: '24px', opacity: isSubmitting ? 0.7 : 1 }}
                 >
-                  Save Policy
+                  {isSubmitting ? 'Saving...' : 'Save Policy'}
                 </button>
               </div>
             </form>

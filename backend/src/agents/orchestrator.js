@@ -115,6 +115,35 @@ Formulate a 6-step resolution plan selecting from available agents:
     const ticket = db.findById('tickets', ticketId);
     if (!ticket) throw new Error(`Ticket ${ticketId} not found`);
 
+    // CENTRAL SERVER-SIDE EXECUTION GUARD (Pause / Disable / Emergency Stop Enforcement)
+    const guard = supervisorAgent.checkExecutionControl({
+      operationType: resumeFromApproval ? 'resume_approval' : 'workflow_start',
+      ticketId
+    });
+
+    if (!guard.allowed) {
+      const newStatus = guard.state === 'EMERGENCY_STOPPED'
+        ? 'FAILED'
+        : (guard.state === 'PAUSED' ? 'WAITING_APPROVAL' : 'OPEN');
+
+      db.update('tickets', ticketId, {
+        status: newStatus,
+        resolution_summary: `Execution gate: ${guard.reason}`
+      });
+
+      db.logAudit({
+        ticket_id: ticketId,
+        event_type: `EXECUTION_${guard.state}`,
+        agent: 'Supervisor Agent',
+        description: guard.reason
+      });
+
+      const err = new Error(guard.reason);
+      err.code = guard.state;
+      err.status = 403;
+      throw err;
+    }
+
     db.update('tickets', ticketId, { status: 'AI_PROCESSING' });
 
     let run = db.findOne('agent_runs', r => r.ticket_id === ticketId && (r.status === 'RUNNING' || r.status === 'WAITING_APPROVAL' || r.status === 'PENDING'));
@@ -407,6 +436,18 @@ Formulate a 6-step resolution plan selecting from available agents:
           message: `Action paused. Human supervisor review required: ${evaluation.reason}`
         };
       }
+    }
+
+    // Central Execution Guard check before executing real action
+    const preActionGuard = supervisorAgent.checkExecutionControl({
+      operationType: 'action_execution',
+      ticketId
+    });
+    if (!preActionGuard.allowed) {
+      this.updateRunStepStatus(run.id, 4, 'PAUSED');
+      db.update('agent_runs', run.id, { status: 'PAUSED' });
+      db.update('tickets', ticketId, { status: 'WAITING_APPROVAL', resolution_summary: preActionGuard.reason });
+      throw new Error(`Action execution halted by control plane: ${preActionGuard.reason}`);
     }
 
     // Execute Action Agent with authorization state

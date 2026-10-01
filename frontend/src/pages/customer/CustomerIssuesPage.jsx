@@ -19,18 +19,45 @@ export default function CustomerIssuesPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let isCancelled = false;
+    let timerId = null;
+
     async function loadTickets() {
       try {
-        setLoading(true);
         const data = await api.getCustomerTickets();
-        setTickets(Array.isArray(data) ? data : []);
+        if (!isCancelled) {
+          setTickets(Array.isArray(data) ? data : []);
+          setLoading(false);
+          if (document.visibilityState === 'visible') {
+            timerId = setTimeout(loadTickets, 6000);
+          }
+        }
       } catch (err) {
-        setError(err.message || 'Failed to load issues');
-      } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setError(err.message || 'Failed to load issues');
+          setLoading(false);
+        }
       }
     }
+
     loadTickets();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !timerId) {
+        loadTickets();
+      } else if (document.visibilityState === 'hidden' && timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isCancelled = true;
+      if (timerId) clearTimeout(timerId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const filteredTickets = tickets.filter(ticket => {

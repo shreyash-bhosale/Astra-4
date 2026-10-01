@@ -67,9 +67,10 @@ export const CreateCustomerSchema = z.object({
 
 // Policies
 export const CreatePolicySchema = z.object({
-  title: z.string().min(3),
-  category: z.string().min(2),
-  content: z.string().min(10),
+  id: z.string().optional(),
+  title: z.string().min(3, 'Title must be at least 3 characters'),
+  category: z.string().min(2, 'Category is required'),
+  content: z.string().min(10, 'Content must be at least 10 characters'),
   active: z.boolean().default(true)
 });
 

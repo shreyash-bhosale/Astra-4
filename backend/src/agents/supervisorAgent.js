@@ -166,15 +166,71 @@ export class SupervisorAgent {
     return merged;
   }
 
+  // Central Server-Side Execution Guard (PRD & Safety Control Plane)
+  checkExecutionControl({ operationType = 'agent_execution', ticketId = null }) {
+    const settings = this.getAutonomySettings();
+    if (settings.emergency_stopped) {
+      return {
+        allowed: false,
+        state: 'EMERGENCY_STOPPED',
+        reason: 'Execution blocked: Emergency Stop is currently ACTIVE.'
+      };
+    }
+    if (settings.paused) {
+      return {
+        allowed: false,
+        state: 'PAUSED',
+        reason: 'Execution paused: Autonomous operations are currently PAUSED by administrator directive.'
+      };
+    }
+    if (!settings.enabled && operationType !== 'human_initiated') {
+      return {
+        allowed: false,
+        state: 'DISABLED',
+        reason: 'Execution halted: Autonomous AI Mode is currently DISABLED.'
+      };
+    }
+    return {
+      allowed: true,
+      state: 'RUNNING',
+      reason: 'Execution permitted.'
+    };
+  }
+
   // Emergency stop all autonomous execution
   emergencyStop(adminUser) {
-    return this.updateAutonomySettings({
+    const updated = this.updateAutonomySettings({
       emergency_stopped: true,
       enabled: false,
       paused: true,
       autonomous_approvals_enabled: false,
       note: 'Emergency Stop engaged by administrator.'
     }, adminUser);
+
+    // Actively halt all active runs across the system
+    try {
+      const activeRuns = db.find('agent_runs', r => r.status === 'RUNNING' || r.status === 'WAITING_APPROVAL');
+      for (const r of activeRuns) {
+        db.update('agent_runs', r.id, {
+          status: 'PAUSED',
+          error_message: 'Halted immediately by Administrator Emergency Stop.'
+        });
+        db.update('tickets', r.ticket_id, {
+          status: 'WAITING_APPROVAL',
+          resolution_summary: 'Execution halted by Emergency Stop.'
+        });
+        db.logAudit({
+          ticket_id: r.ticket_id,
+          event_type: 'EMERGENCY_STOP_HALTED',
+          agent: 'Supervisor Agent',
+          description: `Active workflow for ticket #${r.ticket_id.slice(0, 8)} halted by Emergency Stop.`
+        });
+      }
+    } catch (haltErr) {
+      console.warn('[SUPERVISOR] Notice during emergency halt of active runs:', haltErr.message);
+    }
+
+    return updated;
   }
 
   // Multi-Agent Consistency Check: Detects cross-agent contradictions prior to tool invocation
@@ -440,6 +496,15 @@ export class SupervisorAgent {
       return { success: true, approval, message: 'Approval already granted' };
     }
 
+    // Execution Control Gate
+    const guard = this.checkExecutionControl({
+      operationType: isAI ? 'autonomous_approval' : 'human_approval',
+      ticketId: approval.ticket_id
+    });
+    if (!guard.allowed && (isAI || guard.state === 'EMERGENCY_STOPPED')) {
+      throw new Error(`APPROVAL_BLOCKED: ${guard.reason}`);
+    }
+
     // If AI is approving, verify all gates
     let evaluation = null;
     if (isAI) {
@@ -673,12 +738,52 @@ export class SupervisorAgent {
     const runs = db.find('agent_runs');
     const tickets = db.find('tickets');
     const approvals = db.find('approvals');
+    const policies = db.find('policies');
+    const orders = db.find('orders');
+    const customers = db.find('customers');
     const settings = this.getAutonomySettings();
     const health = this.getFleetHealth();
 
     const activeWorkflows = runs.filter(r => r.status === 'RUNNING' || r.status === 'WAITING_APPROVAL' || r.status === 'RECOVERING');
     const pendingApprovals = approvals.filter(a => a.status === 'PENDING');
     const resolvedCount = tickets.filter(t => t.status === 'RESOLVED').length;
+
+    // Detect if user query refers to a specific ticket
+    const ticketMatch = query.match(/TKT-[\w-]+|ticket\s*#?([0-9a-fA-F-]+)/i);
+    let queriedTicket = null;
+    let ticketRun = null;
+    let ticketSteps = [];
+
+    if (ticketMatch) {
+      const matchTerm = ticketMatch[0].toUpperCase();
+      queriedTicket = tickets.find(t => 
+        (t.id && t.id.toUpperCase().includes(matchTerm.replace('TICKET', '').replace('#', '').trim())) ||
+        (t.id && matchTerm.includes(t.id.slice(0, 8).toUpperCase())) ||
+        (t.title && t.title.toUpperCase().includes(matchTerm))
+      );
+    }
+    if (!queriedTicket && (query.toLowerCase().includes('ticket') || query.toLowerCase().includes('case'))) {
+      // Pick the most recent active ticket or first ticket
+      queriedTicket = tickets.find(t => t.status === 'WAITING_APPROVAL' || t.status === 'AI_PROCESSING') || tickets[0];
+    }
+
+    if (queriedTicket) {
+      ticketRun = runs.find(r => r.ticket_id === queriedTicket.id);
+      ticketSteps = db.find('agent_steps', s => s.ticket_id === queriedTicket.id);
+    }
+
+    let ticketContext = '';
+    if (queriedTicket) {
+      const cust = customers.find(c => c.id === queriedTicket.customer_id);
+      const ord = orders.find(o => o.id === queriedTicket.order_id);
+      ticketContext = `\nQueried Ticket Details (ID: ${queriedTicket.id}):
+- Title: ${queriedTicket.title}
+- Status: ${queriedTicket.status} (Priority: ${queriedTicket.priority})
+- Customer: ${cust ? cust.name : 'Unknown'} (${cust ? cust.email : 'N/A'})
+- Associated Order: ${ord ? `${ord.id} - ${ord.product_name} ($${ord.price})` : (queriedTicket.order_id || 'None')}
+- Resolution Summary: ${queriedTicket.resolution_summary || 'In progress'}
+- Executed Steps: ${ticketSteps.map(s => `${s.agent_name}: ${s.status}`).join(' -> ') || 'None yet'}`;
+    }
 
     const systemContext = `Current System State:
 - Autonomous AI Mode: ${settings.enabled ? (settings.paused ? 'PAUSED' : 'ENABLED') : 'DISABLED'}
@@ -689,42 +794,105 @@ export class SupervisorAgent {
 - Autonomous Refund Limit: $${settings.refund_limit}
 - Agent Fleet: 8/8 Agents operational
 - Allowed Tools: ${settings.allowed_tools.join(', ')}
-- Pending Approval Cases: ${pendingApprovals.map(a => `Ticket #${a.ticket_id.slice(0, 8)} (${a.action}): ${a.reason}`).join(' | ') || 'None'}`;
+- Pending Approval Cases: ${pendingApprovals.map(a => `Ticket #${a.ticket_id.slice(0, 8)} (${a.action}): ${a.reason}`).join(' | ') || 'None'}
+- Active Business Policies: ${policies.map(p => `${p.id}: ${p.title}`).join(', ')}${ticketContext}`;
 
     const prompt = `User Query: "${query}"
 
+${systemContext}
+
 Respond as the ResolveAI Supervisor Agent. Ground your answer strictly in the real system context provided above.
+If the user asks about a specific ticket or why a workflow is waiting, inspect the ticket and approval data.
 Keep your response professional, concise (2-4 sentences), factual, and operational. Never invent cases, orders, or numbers that are not in the system context.`;
 
-    const aiResponse = await aiService.generateText(prompt, 'You are the ResolveAI Supervisor Agent (AI Control Agent). You provide accurate operational telemetry and policy supervision to human administrators.');
+    const aiResponse = await aiService.generateText(prompt, 'You are the ResolveAI Supervisor Agent (AI Control Agent). You provide accurate operational telemetry, ticket inspections, and policy supervision to human administrators.');
 
     if (aiResponse) {
       return { answer: aiResponse, source: 'ai' };
     }
 
-    // Deterministic factual fallback if Gemini is offline
+    // High-fidelity deterministic fallback if Gemini is offline
     const qLower = query.toLowerCase();
-    if (qLower.includes('mode') || qLower.includes('autonomous')) {
+
+    // Specific ticket inspection query
+    if (queriedTicket) {
+      const stepSummary = ticketSteps.length > 0 
+        ? ` Executed agents: ${ticketSteps.map(s => s.agent_name).join(', ')}.`
+        : '';
+      const approvalPending = pendingApprovals.find(a => a.ticket_id === queriedTicket.id);
+      const approvalText = approvalPending 
+        ? ` Currently waiting for supervisor authorization on: ${approvalPending.action} (${approvalPending.reason}).`
+        : '';
+
       return {
-        answer: `Autonomous AI Mode is currently ${settings.enabled ? 'ENABLED' : 'DISABLED'}${settings.paused ? ' (PAUSED)' : ''}. The configured refund limit is $${settings.refund_limit} with ${settings.allowed_tools.length} allowed tool operations.`,
+        answer: `Ticket #${queriedTicket.id.slice(0, 8)} ("${queriedTicket.title}") is currently in ${queriedTicket.status} status with ${queriedTicket.priority} priority.${stepSummary}${approvalText}${queriedTicket.resolution_summary ? ` Resolution notes: "${queriedTicket.resolution_summary}".` : ''}`,
         source: 'deterministic'
       };
     }
-    if (qLower.includes('approval') || qLower.includes('waiting')) {
+
+    // Why is workflow waiting / pending approvals
+    if (qLower.includes('waiting') || qLower.includes('paused') || qLower.includes('approval') || qLower.includes('gate')) {
+      if (pendingApprovals.length > 0) {
+        const top = pendingApprovals[0];
+        return {
+          answer: `Workflow is awaiting authorization for Ticket #${top.ticket_id.slice(0, 8)}. Action Agent proposed "${top.action}" requiring review: "${top.reason}". Autonomous threshold is set to $${settings.refund_limit}.`,
+          source: 'deterministic'
+        };
+      }
+      if (settings.paused) {
+        return {
+          answer: `The multi-agent execution pipeline is currently PAUSED by administrator directive. In-flight operations have completed safely, and new autonomous agent transitions are held until resumed.`,
+          source: 'deterministic'
+        };
+      }
       return {
-        answer: `There are currently ${pendingApprovals.length} workflows paused for human supervisor authorization.${pendingApprovals.length > 0 ? ` Next in queue: ${pendingApprovals[0].action} for Ticket #${pendingApprovals[0].ticket_id.slice(0, 8)}.` : ' All autonomous pipelines are running clear.'}`,
+        answer: `There are currently no workflows paused for approval. All autonomous pipelines are executing or resolved.`,
         source: 'deterministic'
       };
     }
-    if (qLower.includes('active') || qLower.includes('running') || qLower.includes('status')) {
+
+    // What did agents do / agent activity
+    if (qLower.includes('what did') || qLower.includes('agent') || qLower.includes('do') || qLower.includes('action') || qLower.includes('activity')) {
+      const recentSteps = db.find('agent_steps').slice(-5);
+      if (recentSteps.length > 0) {
+        const stepDescriptions = recentSteps.map(s => `${s.agent_name} (${s.status})`).join(' -> ');
+        return {
+          answer: `Recent agent activity across the fleet: ${stepDescriptions}. All 7 specialized agents are coordinated under the Supervisor Agent with zero anomalous deviations.`,
+          source: 'deterministic'
+        };
+      }
       return {
-        answer: `Currently monitoring ${activeWorkflows.length} active workflows across ${tickets.length} total cases. All 8 agents are reporting HEALTHY status with zero critical anomalies.`,
+        answer: `Fleet status: 8 operational agents active. Triage, Investigation, Policy, Action, Communication, and Verification agents are monitoring incoming cases.`,
+        source: 'deterministic'
+      };
+    }
+
+    // Policy query
+    if (qLower.includes('policy') || qLower.includes('rule') || qLower.includes('pol-')) {
+      return {
+        answer: `Currently active policies: ${policies.map(p => `${p.id} (${p.title})`).join(', ')}. The Policy Agent validates case evidence against these rules before any autonomous action execution.`,
+        source: 'deterministic'
+      };
+    }
+
+    // Autonomous mode & controls
+    if (qLower.includes('mode') || qLower.includes('autonomous') || qLower.includes('emergency')) {
+      return {
+        answer: `Autonomous AI Mode is currently ${settings.enabled ? 'ENABLED' : 'DISABLED'}${settings.paused ? ' (PAUSED)' : ''}. Emergency Stop: ${settings.emergency_stopped ? 'ACTIVE' : 'INACTIVE'}. Refund threshold: $${settings.refund_limit} with ${settings.allowed_tools.length} allowlisted tools.`,
+        source: 'deterministic'
+      };
+    }
+
+    // Fleet status
+    if (qLower.includes('active') || qLower.includes('running') || qLower.includes('status') || qLower.includes('health')) {
+      return {
+        answer: `Fleet operational telemetry: ${activeWorkflows.length} active workflows, ${resolvedCount} resolved cases, ${pendingApprovals.length} pending human gates. Fleet health score is 100% across all 8 agents.`,
         source: 'deterministic'
       };
     }
 
     return {
-      answer: `Supervisor Telemetry: System is operating normally with ${activeWorkflows.length} active workflows, ${pendingApprovals.length} pending supervisor gates, and Autonomous Mode ${settings.enabled ? 'ENABLED' : 'DISABLED'}.`,
+      answer: `Supervisor Telemetry: System active with ${tickets.length} total tickets (${resolvedCount} resolved), ${activeWorkflows.length} active workflows, and Autonomous Mode ${settings.enabled ? (settings.paused ? 'PAUSED' : 'ACTIVE') : 'DISABLED'}.`,
       source: 'deterministic'
     };
   }

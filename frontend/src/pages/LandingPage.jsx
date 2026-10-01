@@ -651,38 +651,124 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Agent Runtime Log Card */}
+              {/* Polished User-Facing Agent Status Panel */}
               <div
                 style={{
-                  backgroundColor: '#050507',
-                  color: '#e4e4e7',
-                  padding: '24px',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  padding: '28px',
                   borderRadius: 'var(--radius-lg)',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.78rem',
-                  lineHeight: 1.6,
                   border: '1px solid var(--border-subtle)',
-                  boxShadow: 'var(--shadow-card)'
+                  boxShadow: 'var(--shadow-card)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '18px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #27272a', paddingBottom: '10px', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }}></span>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#eab308' }}></span>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e' }}></span>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: '14px' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 800, letterSpacing: '-0.02em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                    Agent Status
                   </div>
-                  <span style={{ color: '#71717a', fontSize: '0.7rem' }}>AGENT_RUNTIME.LOG</span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--accent-emerald)',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-emerald)', boxShadow: '0 0 6px var(--accent-emerald)' }}></span>
+                    {activeAgentTab === 0 ? 'Planning' : activeAgentTab === 1 ? 'Classifying' : activeAgentTab === 2 ? 'Investigating' : activeAgentTab === 3 ? 'Reasoning' : activeAgentTab === 4 ? 'Executing' : activeAgentTab === 5 ? 'Communicating' : 'Auditing'}
+                  </span>
                 </div>
-                <div style={{ color: '#38bdf8' }}>// Active Agent Contract Schema</div>
-                <div style={{ color: '#a1a1aa' }}>{"{"}</div>
-                <div style={{ paddingLeft: '16px' }}>
-                  <span style={{ color: '#e4e4e7' }}>"agent"</span>: <span style={{ color: '#34d399' }}>"{agentFleet[activeAgentTab].name}"</span>,<br />
-                  <span style={{ color: '#e4e4e7' }}>"model"</span>: <span style={{ color: '#34d399' }}>"gemini-flash-latest"</span>,<br />
-                  <span style={{ color: '#e4e4e7' }}>"zod_validated"</span>: <span style={{ color: '#f472b6' }}>true</span>,<br />
-                  <span style={{ color: '#e4e4e7' }}>"requires_approval"</span>: <span style={{ color: '#f472b6' }}>{activeAgentTab === 4 ? 'true' : 'false'}</span>
+
+                {/* Current Task */}
+                <div>
+                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '4px' }}>
+                    Current Task
+                  </div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                    {activeAgentTab === 0 && 'Formulating dynamic DAG resolution plan for customer request'}
+                    {activeAgentTab === 1 && 'Classifying issue intent, urgency & extracting customer entities'}
+                    {activeAgentTab === 2 && 'Querying customer order history & evaluating warranty window'}
+                    {activeAgentTab === 3 && 'Evaluating company return policy compliance against evidence'}
+                    {activeAgentTab === 4 && 'Executing replacement dispatch under supervisor governance'}
+                    {activeAgentTab === 5 && 'Composing factual, empathetic multi-channel notification'}
+                    {activeAgentTab === 6 && 'Performing 5-point deterministic resolution verification'}
+                  </div>
                 </div>
-                <div style={{ color: '#a1a1aa' }}>{"}"}</div>
-                <div style={{ marginTop: '12px', color: '#4ade80' }}>✓ Schema validated & sandbox verified</div>
+
+                {/* Current Step */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '4px' }}>
+                      Current Step
+                    </div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                      {agentFleet[activeAgentTab].name}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '4px' }}>
+                      Active Specialists
+                    </div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {activeAgentTab === 0 ? '7 Coordinated Agents' : '1 Active Specialist'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>
+                      Execution Progress
+                    </span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {activeAgentTab === 0 ? '100%' : activeAgentTab === 1 ? '20%' : activeAgentTab === 2 ? '40%' : activeAgentTab === 3 ? '60%' : activeAgentTab === 4 ? '80%' : activeAgentTab === 5 ? '90%' : '100%'}
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        borderRadius: '999px',
+                        backgroundColor: 'var(--accent-emerald)',
+                        transition: 'width 0.4s ease',
+                        width: activeAgentTab === 0 ? '100%' : activeAgentTab === 1 ? '20%' : activeAgentTab === 2 ? '40%' : activeAgentTab === 3 ? '60%' : activeAgentTab === 4 ? '80%' : activeAgentTab === 5 ? '90%' : '100%'
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Verification & Approval */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>
+                      Verification
+                    </div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      ✓ Verified
+                    </div>
+                  </div>
+                  {activeAgentTab === 4 && (
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>
+                        Approval Gate
+                      </div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-amber)', marginTop: '2px' }}>
+                        Supervisor Gated
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

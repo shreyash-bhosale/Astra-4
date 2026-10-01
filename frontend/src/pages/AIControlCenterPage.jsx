@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -43,10 +43,12 @@ export default function AIControlCenterPage() {
   // Confirmation Modal State
   const [showEnableModal, setShowEnableModal] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const inFlightRef = useRef(false);
 
   // Operational Chat State
   const [chatMessages, setChatMessages] = useState([
     {
+      id: 'msg-init',
       sender: 'supervisor',
       text: 'ResolveAI Supervisor Agent online. Telemetry active across all 7 operational agents. Ask me anything regarding current fleet health, running workflows, or policy boundaries.'
     }
@@ -217,20 +219,34 @@ export default function AIControlCenterPage() {
 
   const handleSendQuery = async (e) => {
     e?.preventDefault();
-    if (!queryInput.trim() || queryLoading) return;
-
     const userQ = queryInput.trim();
+    if (!userQ || inFlightRef.current || queryLoading) return;
+
+    inFlightRef.current = true;
+    const userMsgId = `usr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const assistantMsgId = `ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
     setQueryInput('');
-    setChatMessages(prev => [...prev, { sender: 'user', text: userQ }]);
+    setChatMessages(prev => {
+      if (prev.some(m => m.id === userMsgId)) return prev;
+      return [...prev, { id: userMsgId, sender: 'user', text: userQ }];
+    });
     setQueryLoading(true);
 
     try {
       const res = await api.sendSupervisorQuery(userQ);
-      setChatMessages(prev => [...prev, { sender: 'supervisor', text: res.answer, source: res.source }]);
+      setChatMessages(prev => {
+        if (prev.some(m => m.id === assistantMsgId)) return prev;
+        return [...prev, { id: assistantMsgId, sender: 'supervisor', text: res.answer, source: res.source }];
+      });
     } catch (err) {
-      setChatMessages(prev => [...prev, { sender: 'supervisor', text: `Error retrieving telemetry: ${err.message}` }]);
+      setChatMessages(prev => {
+        if (prev.some(m => m.id === assistantMsgId)) return prev;
+        return [...prev, { id: assistantMsgId, sender: 'supervisor', text: `Error retrieving telemetry: ${err.message}` }];
+      });
     } finally {
       setQueryLoading(false);
+      inFlightRef.current = false;
     }
   };
 
@@ -629,7 +645,7 @@ export default function AIControlCenterPage() {
           }}>
             {chatMessages.map((msg, idx) => (
               <div
-                key={idx}
+                key={msg.id || `msg-${idx}`}
                 style={{
                   alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                   maxWidth: '85%',
@@ -870,12 +886,15 @@ export default function AIControlCenterPage() {
                     onClick={() => setDraftRefundLimit(amt)}
                     style={{
                       flex: 1,
-                      height: '36px',
+                      height: '38px',
                       borderRadius: 'var(--radius-sm)',
-                      border: draftRefundLimit === amt ? '2px solid #000000' : '1px solid var(--border-subtle)',
-                      backgroundColor: draftRefundLimit === amt ? 'var(--bg-secondary)' : 'var(--bg-primary)',
-                      fontWeight: draftRefundLimit === amt ? 800 : 500,
-                      fontSize: '0.82rem',
+                      border: draftRefundLimit === amt ? '2px solid var(--accent-black)' : '1px solid var(--border-strong)',
+                      backgroundColor: draftRefundLimit === amt ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                      color: draftRefundLimit === amt ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: draftRefundLimit === amt ? 800 : 600,
+                      fontSize: '0.85rem',
+                      boxShadow: draftRefundLimit === amt ? 'var(--shadow-subtle)' : 'none',
+                      transition: 'all var(--transition-fast)',
                       cursor: isAdmin ? 'pointer' : 'default'
                     }}
                   >

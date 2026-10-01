@@ -28,7 +28,7 @@ export const requireAuth = async (req, res, next) => {
           id: supaUser.id,
           name: supaUser.user_metadata?.name || localUser?.name || supaUser.email?.split('@')[0] || 'User',
           email: supaUser.email,
-          role: supaUser.user_metadata?.role || localUser?.role || 'agent'
+          role: supaUser.user_metadata?.role || localUser?.role || 'customer'
         };
 
         return next();

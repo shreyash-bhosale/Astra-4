@@ -321,9 +321,34 @@ export function handleClientMock(endpoint, options = {}) {
     return { status: ticket.status, message: 'Workflow completed.' };
   }
 
+  // Internal Notes: POST /tickets/:id/notes
+  if (endpoint.includes('/notes') && method === 'POST') {
+    const parts = endpoint.split('/');
+    const ticketId = parts[2];
+    const ticket = (store.tickets || []).find(t => t.id === ticketId);
+    if (ticket) {
+      if (!ticket.internal_notes) ticket.internal_notes = [];
+      const newNote = {
+        id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        author: user?.name || 'Staff Member',
+        authorRole: user?.role || 'agent',
+        content: body?.note?.trim() || '',
+        created_at: new Date().toISOString()
+      };
+      ticket.internal_notes.push(newNote);
+      saveStorage(store);
+      return { success: true, notes: ticket.internal_notes };
+    }
+    return { success: false, error: 'Ticket not found' };
+  }
+
   // Approvals: GET /approvals
   if (endpoint.startsWith('/approvals') && !endpoint.includes('/approve') && method === 'GET') {
-    return store.approvals;
+    const list = store.approvals || [];
+    if (endpoint.toLowerCase().includes('status=pending')) {
+      return list.filter(a => a.status === 'PENDING' || a.status === 'ESCALATED');
+    }
+    return list;
   }
 
   // Approvals: POST /approvals/:id/approve
@@ -553,9 +578,43 @@ export function handleClientMock(endpoint, options = {}) {
     return { success: true, message: 'Autonomy status updated successfully.' };
   }
 
-  if (endpoint.startsWith('/customers')) return store.customers;
+  if (endpoint.startsWith('/customers')) {
+    const orders = store.orders || [];
+    const tickets = store.tickets || [];
+    return (store.customers || []).map(c => {
+      const custOrders = orders.filter(o => o.customer_id === c.id || o.customerId === c.id);
+      const custTickets = tickets.filter(t => t.customer_id === c.id || t.customerId === c.id);
+      const totalSpent = custOrders.reduce((sum, o) => {
+        const val = Number(o.amount) || Number(o.price) || (o.items && Number(o.items[0]?.price)) || 0;
+        return sum + val;
+      }, 0);
+      return {
+        ...c,
+        ordersCount: custOrders.length,
+        ticketsCount: custTickets.length,
+        totalSpent,
+        orders: custOrders
+      };
+    });
+  }
   if (endpoint.startsWith('/orders')) return store.orders;
-  if (endpoint.startsWith('/policies')) return store.policies;
+  if (endpoint.startsWith('/policies')) {
+    if (method === 'POST') {
+      const newPolicy = {
+        id: body?.id || `POL-${String((store.policies?.length || 0) + 1).padStart(3, '0')}`,
+        title: body?.title || 'Untitled Policy',
+        category: body?.category || 'general',
+        content: body?.content || '',
+        active: body?.active !== undefined ? body.active : true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      store.policies = [newPolicy, ...(store.policies || [])];
+      saveStorage(store);
+      return newPolicy;
+    }
+    return store.policies;
+  }
   if (endpoint.startsWith('/activity')) return store.audit_logs;
   if (endpoint === '/health') return { status: 'ONLINE', mode: 'CLIENT_MOCK_READY' };
   if (endpoint === '/reset') {

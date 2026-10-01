@@ -169,10 +169,26 @@ export default function RaiseIssuePage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setSubmittedTicket(null);
+                setSubject('');
+                setDescription('');
+                setCategory('damaged_product');
+                setError('');
+                if (orders.length > 0) setOrderId(orders[0].id);
+              }}
+              className="btn-primary"
+              style={{ height: '44px', paddingInline: '22px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <PlusCircle size={16} />
+              <span>Raise Another Issue</span>
+            </button>
             <Link
               to={`/customer/issues/${submittedTicket.id}`}
-              className="btn-primary"
-              style={{ height: '44px', paddingInline: '24px', fontSize: '0.9rem' }}
+              className="btn-secondary"
+              style={{ height: '44px', paddingInline: '20px', fontSize: '0.9rem' }}
             >
               Track Case Progress
             </Link>
@@ -295,11 +311,15 @@ export default function RaiseIssuePage() {
                   }}
                 >
                   <option value="">-- No specific order linked --</option>
-                  {orders.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      Order #{o.id} • {o.productName} (${o.amount}) • {o.status}
-                    </option>
-                  ))}
+                  {orders.map((o) => {
+                    const pName = o.product_name || o.productName || (o.items && o.items[0]?.name) || 'Product Item';
+                    const rawPrice = o.amount !== undefined ? o.amount : (o.price !== undefined ? o.price : (o.items && o.items[0]?.price) || 0);
+                    return (
+                      <option key={o.id} value={o.id}>
+                        Order #{o.id} • {pName} (${Number(rawPrice).toFixed(2)}) • {o.status}
+                      </option>
+                    );
+                  })}
                 </select>
               ) : (
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '10px 14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)' }}>

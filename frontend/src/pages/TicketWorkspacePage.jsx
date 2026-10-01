@@ -260,23 +260,21 @@ export default function TicketWorkspacePage() {
 
   const handleAddInternalNote = async (e) => {
     e.preventDefault();
-    if (!noteContent.trim()) return;
+    const cleanNote = noteContent.trim();
+    if (!cleanNote) return;
     setAddingNote(true);
     setActionError('');
     try {
-      const res = await api.addTicketInternalNote(id, noteContent.trim());
-      setTicket(prev => ({
-        ...prev,
-        internal_notes: res.notes || [...(prev.internal_notes || []), {
-          id: `note-${Date.now()}`,
-          author: 'Current Staff',
-          authorRole: 'agent',
-          content: noteContent.trim(),
-          created_at: new Date().toISOString()
-        }]
-      }));
+      const res = await api.addTicketInternalNote(id, cleanNote);
+      if (res && res.notes) {
+        setTicket(prev => ({
+          ...prev,
+          internal_notes: res.notes
+        }));
+      } else {
+        await fetchTicket();
+      }
       setNoteContent('');
-      fetchTicket();
     } catch (err) {
       setActionError(err.message || 'Failed to add internal note');
     } finally {

@@ -9,7 +9,11 @@ export const listApprovals = async (req, res, next) => {
     let approvals = db.find('approvals');
 
     if (status) {
-      approvals = approvals.filter(a => a.status.toLowerCase() === status.toLowerCase());
+      if (status.toUpperCase() === 'PENDING') {
+        approvals = approvals.filter(a => a.status === 'PENDING' || a.status === 'ESCALATED');
+      } else {
+        approvals = approvals.filter(a => a.status.toLowerCase() === status.toLowerCase());
+      }
     }
 
     const populated = approvals.map(a => {

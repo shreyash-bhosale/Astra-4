@@ -100,8 +100,22 @@ ${prompt}`;
     return null;
   }
 
-  async generateText({ prompt, temperature = 0.4 }) {
+  async generateText(optionsOrPrompt, maybeSystemInstruction) {
     if (!this.apiKey) return null;
+
+    let prompt = '';
+    let temperature = 0.4;
+
+    if (typeof optionsOrPrompt === 'string') {
+      prompt = maybeSystemInstruction
+        ? `${maybeSystemInstruction}\n\n${optionsOrPrompt}`
+        : optionsOrPrompt;
+    } else if (optionsOrPrompt && typeof optionsOrPrompt === 'object') {
+      prompt = optionsOrPrompt.prompt || '';
+      temperature = optionsOrPrompt.temperature !== undefined ? optionsOrPrompt.temperature : 0.4;
+    }
+
+    if (!prompt || !prompt.trim()) return null;
 
     for (const model of this.models) {
       try {

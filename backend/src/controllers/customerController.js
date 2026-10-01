@@ -5,14 +5,18 @@ export const listCustomers = async (req, res, next) => {
   try {
     const customers = db.find('customers');
     const populated = customers.map(c => {
-      const orders = db.find('orders', o => o.customer_id === c.id);
-      const tickets = db.find('tickets', t => t.customer_id === c.id);
-      const totalSpent = orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+      const orders = db.find('orders', o => o.customer_id === c.id || o.customerId === c.id || (c.email && o.customer_email === c.email));
+      const tickets = db.find('tickets', t => t.customer_id === c.id || t.customerId === c.id);
+      const totalSpent = orders.reduce((sum, o) => {
+        const val = Number(o.amount) || Number(o.price) || (o.items && Number(o.items[0]?.price)) || 0;
+        return sum + val;
+      }, 0);
       return {
         ...c,
         ordersCount: orders.length,
         ticketsCount: tickets.length,
-        totalSpent
+        totalSpent,
+        orders
       };
     });
     return res.json(populated);
