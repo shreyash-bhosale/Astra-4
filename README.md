@@ -283,13 +283,25 @@ Defense-in-depth controls reduce the risk of unauthorized AI actions and cross-t
 > **Watch the complete ResolveAI workflow — from customer issue intake to investigation, policy evaluation, supervisor approval, operational execution, customer email delivery, and independent verification.**
 
 <p align="center">
-  <img src="./docs/screenshots/resolveai-demo-walkthrough.gif" alt="ResolveAI Animated Walkthrough Demo" width="95%" />
+  <a href="https://astra-4-opal.vercel.app/">
+    <img src="./docs/screenshots/resolveai-demo-walkthrough.gif" alt="ResolveAI Animated Walkthrough Demo" width="95%" />
+  </a>
 </p>
 
 <p align="center">
-  <em>Interactive Walkthrough: Multi-agent DAG execution, approval gating, and autonomous case resolution.</em>
+  <em><strong>Interactive Walkthrough:</strong> Multi-agent DAG execution, human-in-the-loop approval gating, warehouse replacement fulfillment, and autonomous case resolution.</em>
 </p>
 
+### ⚡ Try the Live Production Demo Instantly
+
+| Role | Portal URL | 1-Click Test Credentials | Core Capabilities to Evaluate |
+| :--- | :--- | :--- | :--- |
+| **Admin** | [`/staff/login`](https://astra-4-opal.vercel.app/staff/login) | `admin@resolveai.io` / `password123` | Autonomous engine, AI Control Center thresholds, policy settings, audit logs. |
+| **Operations Manager** | [`/staff/login`](https://astra-4-opal.vercel.app/staff/login) | `manager@resolveai.io` / `password123` | Human-in-the-loop approval gate, dossier review, manual overrides. |
+| **Support Agent** | [`/staff/login`](https://astra-4-opal.vercel.app/staff/login) | `agent@resolveai.io` / `password123` | Run autonomous DAG resolution, view live agent reasoning and tool executions. |
+| **Customer** | [`/customer/login`](https://astra-4-opal.vercel.app/customer/login) | `customer@resolveai.io` / `password123` | Submit issues, link orders, track progress, real-time email notifications. |
+
+* **Interactive Live Site:** [https://astra-4-opal.vercel.app/](https://astra-4-opal.vercel.app/)
 * **Timed Demo Script:** A detailed 3-minute hackathon judge walkthrough script is available in [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md).
 
 ---
@@ -385,38 +397,115 @@ sequenceDiagram
 
 ## 🖼️ User Interface & Screenshot Gallery
 
-All screenshots below are included in the repository under [`docs/screenshots/`](./docs/screenshots/):
+All production screenshots below are available in high resolution under [`docs/screenshots/`](./docs/screenshots/):
 
-### 1. Futuristic Liquid-Metal Landing Page Hero (Dark & Light Mode)
+### 1. Futuristic Liquid-Metal Landing Page & Art Direction
+*Designed according to the strict **Premium Futuristic Liquid-Metal** design system, featuring a responsive Three.js metallic fluid shader canvas, neo-grotesk typography, and full dark/light theme support.*
+
+<p align="center">
+  <img src="./docs/screenshots/landing_page_hero.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero" width="95%" />
+</p>
+
 <p align="center">
   <img src="./docs/screenshots/landing_page_dark.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Dark Mode" width="49%" />
   <img src="./docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero - Light Mode" width="49%" />
 </p>
 
-### 2. Multi-Agent Fleet Showcase & Polished Status Monitor
+---
+
+### 2. Multi-Tenant Role Gateway & 1-Click Evaluator Authentication
+*Zero friction for hackathon evaluators: Dedicated portal selection gateway and one-click role switching for Admin, Manager, and Customer personas.*
+
+<p align="center">
+  <img src="./docs/screenshots/login_selection.png" alt="Portal Selection - Staff Console vs. Customer Care" width="49%" />
+  <img src="./docs/screenshots/login_page.png" alt="Staff Console 1-Click Evaluator Authentication" width="49%" />
+</p>
+
+---
+
+### 3. Operations Command Center & 8-Agent Autonomous Fleet Status
+*Real-time operational dashboard with system health indicators, live ticket volume trends, resolution rates, and instant fleet supervisory status.*
+
+<p align="center">
+  <img src="./docs/screenshots/dashboard_overview.png" alt="ResolveAI Operations Command Center" width="95%" />
+</p>
+
 <p align="center">
   <img src="./docs/screenshots/agent_fleet_showcase.png" alt="8-Agent Autonomous Fleet Showcase" width="95%" />
 </p>
 
-### 3. Operations Dashboard & Real-Time Fleet Health
+---
+
+### 4. Customer Support Tickets Management
+*High-density operations table with live status filtering, category drilldowns, real-time search, customer reference links, and direct ticket workspace launchers.*
+
 <p align="center">
-  <img src="./docs/screenshots/dashboard_overview.png" alt="ResolveAI Operations Dashboard" width="95%" />
+  <img src="./docs/screenshots/tickets_list.png" alt="Customer Support Tickets Console" width="95%" />
 </p>
 
-### 4. Interactive 6-Step DAG Execution Workspace & Human-in-the-Loop Gate
+---
+
+### 5. Autonomous Multi-Agent DAG Investigation & Execution Workspace
+*The core autonomous workspace: Watch the 8 agents execute a 6-step Directed Acyclic Graph plan, synthesize customer context, evaluate policies, construct evidence dossiers, and verify resolutions with independent 5-point audits.*
+
 <p align="center">
+  <img src="./docs/screenshots/ticket_workspace_initial.png" alt="Ticket Workspace Initial Investigation State" width="49%" />
   <img src="./docs/screenshots/ticket_workspace_paused_gate.png" alt="Ticket Workspace Paused at Human Approval Gate" width="49%" />
-  <img src="./docs/screenshots/human_approval_gate.png" alt="Human-in-the-Loop Supervisor Approval Queue" width="49%" />
 </p>
 
-### 5. Verified Case Resolution with Append-Oriented Audit Trail
 <p align="center">
   <img src="./docs/screenshots/ticket_workspace_resolved.png" alt="Verified Resolution State with 5-Point Audit Checklist" width="95%" />
 </p>
 
-### 6. Rapid Evaluation Login Screen with 1-Click Demo Personas
+---
+
+### 6. Human-in-the-Loop Operations Manager Approval Queue
+*Strict human supervision for sensitive actions exceeding autonomous thresholds. Managers review structured evidence dossiers, policy justifications, and sign approvals with cryptographic attribution.*
+
 <p align="center">
-  <img src="./docs/screenshots/login_page.png" alt="ResolveAI Authentication & 1-Click Personas" width="60%" />
+  <img src="./docs/screenshots/human_approval_gate.png" alt="Human-in-the-Loop Supervisor Approval Queue" width="95%" />
+</p>
+
+---
+
+### 7. AI Control Center & Safety Governance
+*Configurable autonomy parameters: Master autonomy toggles, monetary threshold sliders ($0 to $1,000+), risk category filters, and supervisor auto-approve rules.*
+
+<p align="center">
+  <img src="./docs/screenshots/ai_control_center.png" alt="AI Control Center & Autonomous Policy Governance" width="95%" />
+</p>
+
+---
+
+### 8. Cryptographic Append-Oriented Activity & Audit Log
+*Immutable, tamper-evident audit stream logging every agent thought, tool execution, customer communication dispatch, and human override with full JSON inspector payloads.*
+
+<p align="center">
+  <img src="./docs/screenshots/activity_audit_log.png" alt="Cryptographic Append-Oriented Activity & Audit Log" width="95%" />
+</p>
+
+---
+
+### 9. Platform & Transactional Email Settings Console
+*Transactional email configuration with live Resend verification, developer sandbox recipient routing, and dark/light system appearance controls.*
+
+<p align="center">
+  <img src="./docs/screenshots/settings_page.png" alt="Platform Settings & Resend Transactional Email Sandbox" width="95%" />
+</p>
+
+---
+
+### 10. Customer Care Portal (Consumer Experience)
+*Dedicated, accessible end-user experience: Track ongoing inquiries, launch warranty claims with instant order linking, and monitor autonomous resolution steps in real time.*
+
+<p align="center">
+  <img src="./docs/screenshots/customer_portal_home.png" alt="Customer Portal Home & Active Inquiries" width="49%" />
+  <img src="./docs/screenshots/customer_issues_list.png" alt="Customer Issues List & Step Tracker" width="49%" />
+</p>
+
+<p align="center">
+  <img src="./docs/screenshots/customer_submit_issue.png" alt="Customer Raise Issue Intake Form" width="49%" />
+  <img src="./docs/screenshots/customer_orders.png" alt="Customer Order History & Dispute Launcher" width="49%" />
 </p>
 
 ---

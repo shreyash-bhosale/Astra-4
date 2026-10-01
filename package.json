@@ -25,5 +25,11 @@
     "resend": "^6.31.0",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "puppeteer": "^25.12.0"
+  },
+  "allowScripts": {
+    "puppeteer@25.12.0": true
   }
 }
