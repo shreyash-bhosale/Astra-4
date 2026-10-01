@@ -514,10 +514,6 @@ All production screenshots below are available in high resolution under [`docs/s
   <img src="docs/screenshots/landing_page_hero.png" alt="ResolveAI Futuristic Liquid-Metal Landing Hero" width="95%" />
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/landing_page_light.png" alt="ResolveAI Futuristic Liquid-Metal Landing Full View" width="95%" />
-</p>
-
 ---
 
 ### 2. Multi-Tenant Role Gateway & 1-Click Evaluator Authentication
