@@ -278,9 +278,12 @@ export class Repository {
             payload.customer_id = null;
           }
         } else if (tableName === 'approvals') {
-          delete payload.decision_type;
-          delete payload.decision_maker;
-          delete payload.rejection_reason;
+          // decision_type, decision_maker, rejection_reason all exist in Supabase schema
+          // Only remove unknown/virtual fields not in the schema
+          delete payload.ticket;
+          delete payload.customer;
+          delete payload.order;
+          delete payload.reviewer;
         } else if (tableName === 'audit_logs') {
           if (payload.ticket_id && !this.findById('tickets', payload.ticket_id)) {
             payload.ticket_id = null;

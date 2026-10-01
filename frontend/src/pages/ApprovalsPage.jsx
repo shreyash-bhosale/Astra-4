@@ -445,11 +445,20 @@ export default function ApprovalsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {filteredApprovals.map((appr) => {
-            const isPending = appr.status === 'PENDING' || appr.status === 'ESCALATED';
-            const isAIApproved = appr.decision_type === 'AI_APPROVED' || (appr.status === 'APPROVED' && appr.decision_maker?.includes('Supervisor'));
-            const isAIRejected = appr.decision_type === 'AI_REJECTED' || (appr.status === 'REJECTED' && appr.decision_maker?.includes('Supervisor'));
-            const isHumanApproved = appr.decision_type === 'HUMAN_APPROVED' || (appr.status === 'APPROVED' && !appr.decision_maker?.includes('Supervisor'));
-            const isHumanRejected = appr.decision_type === 'HUMAN_REJECTED' || (appr.status === 'REJECTED' && !appr.decision_maker?.includes('Supervisor'));
+            // EVALUATING is a transient state — treat it like PENDING unless ticket is already resolved
+            const ticketResolved = appr.ticket?.status === 'RESOLVED';
+            const isPending = (appr.status === 'PENDING' || appr.status === 'ESCALATED' || (appr.status === 'EVALUATING' && !ticketResolved));
+            // Derive decision info — handle cases where decision_type isn't yet set
+            const effectiveDecisionType = appr.decision_type ||
+              (appr.status === 'APPROVED' && appr.decision_maker?.includes('Supervisor') ? 'AI_APPROVED' :
+               appr.status === 'APPROVED' ? 'HUMAN_APPROVED' :
+               appr.status === 'REJECTED' && appr.decision_maker?.includes('Supervisor') ? 'AI_REJECTED' :
+               appr.status === 'REJECTED' ? 'HUMAN_REJECTED' :
+               (appr.status === 'EVALUATING' && ticketResolved) ? 'AI_APPROVED' : null);
+            const isAIApproved = effectiveDecisionType === 'AI_APPROVED' || (appr.status === 'APPROVED' && appr.decision_maker?.includes('Supervisor')) || (appr.status === 'EVALUATING' && ticketResolved);
+            const isAIRejected = effectiveDecisionType === 'AI_REJECTED' || (appr.status === 'REJECTED' && appr.decision_maker?.includes('Supervisor'));
+            const isHumanApproved = effectiveDecisionType === 'HUMAN_APPROVED' || (appr.status === 'APPROVED' && !appr.decision_maker?.includes('Supervisor') && !isAIApproved);
+            const isHumanRejected = effectiveDecisionType === 'HUMAN_REJECTED' || (appr.status === 'REJECTED' && !appr.decision_maker?.includes('Supervisor'));
 
             return (
               <div
@@ -527,17 +536,36 @@ export default function ApprovalsPage() {
                           ✕ HUMAN REJECTED
                         </span>
                       ) : (
-                        <span style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          padding: '3px 10px',
-                          borderRadius: 'var(--radius-pill)',
-                          backgroundColor: '#fffbeb',
-                          color: '#b45309',
-                          border: '1px solid #fde68a'
-                        }}>
-                          ⚠ HUMAN REVIEW REQUIRED
-                        </span>
+                        // Resolved tickets – show green check badge
+                        appr.status === 'RESOLVED' ? (
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            padding: '3px 10px',
+                            borderRadius: 'var(--radius-pill)',
+                            backgroundColor: '#ecfdf5',
+                            color: '#047857',
+                            border: '1px solid #a7f3d0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}>
+                            <CheckCircle2 size={16} color="#047857" />
+                            <span>COMPLETED</span>
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            padding: '3px 10px',
+                            borderRadius: 'var(--radius-pill)',
+                            backgroundColor: '#fffbeb',
+                            color: '#b45309',
+                            border: '1px solid #fde68a'
+                          }}>
+                            ⚠ HUMAN REVIEW REQUIRED
+                          </span>
+                        )
                       )}
 
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
